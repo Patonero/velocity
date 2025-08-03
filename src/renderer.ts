@@ -73,7 +73,7 @@ interface LauncherSettings {
   emulators: EmulatorConfig[];
   theme: 'light' | 'dark' | 'auto';
   gridSize: 'small' | 'medium' | 'large';
-  sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount';
+  sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount' | 'emulatorType';
   showDescriptions: boolean;
 }
 
@@ -220,7 +220,7 @@ class VelocityLauncher {
     const sortSelect = document.getElementById("sort-select");
     sortSelect?.addEventListener("change", (e) => {
       const target = e.target as HTMLSelectElement;
-      this.sortEmulators(target.value as keyof EmulatorConfig);
+      this.sortEmulators(target.value as LauncherSettings['sortBy']);
     });
 
     // Theme controls
@@ -561,7 +561,7 @@ class VelocityLauncher {
     }
   }
 
-  private sortEmulators(sortBy: keyof EmulatorConfig): void {
+  private sortEmulators(sortBy: LauncherSettings['sortBy']): void {
     if (!this.settings) return;
 
     this.settings.emulators.sort((a, b) => {
@@ -585,7 +585,7 @@ class VelocityLauncher {
     });
 
     // Update settings with new sort order
-    this.settings.sortBy = sortBy as any;
+    this.settings.sortBy = sortBy;
     (window as any).electronAPI.saveSettings(this.settings);
     
     this.renderEmulators();
@@ -596,7 +596,7 @@ class VelocityLauncher {
     if (sortSelect && this.settings) {
       sortSelect.value = this.settings.sortBy || 'name';
       // Apply initial sort
-      this.sortEmulators(this.settings.sortBy as keyof EmulatorConfig || 'name');
+      this.sortEmulators(this.settings.sortBy || 'name');
     }
   }
 

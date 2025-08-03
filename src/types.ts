@@ -17,7 +17,7 @@ export interface LauncherSettings {
   emulators: EmulatorConfig[];
   theme: 'light' | 'dark' | 'auto';
   gridSize: 'small' | 'medium' | 'large';
-  sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount';
+  sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount' | 'emulatorType';
   showDescriptions: boolean;
 }
 
