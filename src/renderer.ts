@@ -17,7 +17,7 @@ interface EmulatorConfig {
 
 interface LauncherSettings {
   emulators: EmulatorConfig[];
-  theme: 'light' | 'dark';
+  theme: 'light' | 'dark' | 'auto';
   gridSize: 'small' | 'medium' | 'large';
   sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount';
   showDescriptions: boolean;
@@ -56,6 +56,7 @@ class VelocityLauncher {
   private emulatorForm: HTMLFormElement | null = null;
   private confirmationModal: HTMLElement | null = null;
   private currentEditingId: string | null = null;
+  private systemPrefersDark: boolean = false;
 
   constructor() {
     this.init();
@@ -72,9 +73,11 @@ class VelocityLauncher {
   }
 
   private async loadAndSetup(): Promise<void> {
+    this.detectSystemTheme();
     await this.loadSettings();
     this.setupElements();
     this.setupEventListeners();
+    this.initializeTheme();
     this.initializeSortSelect();
     this.renderEmulators();
   }
@@ -165,6 +168,10 @@ class VelocityLauncher {
       const target = e.target as HTMLSelectElement;
       this.sortEmulators(target.value as keyof EmulatorConfig);
     });
+
+    // Theme controls
+    const themeToggle = document.getElementById("theme-toggle");
+    themeToggle?.addEventListener("click", () => this.toggleTheme());
   }
 
   private renderEmulators(): void {
@@ -239,7 +246,9 @@ class VelocityLauncher {
             </span>
           ` : ''}
         </div>
-        <div class="launch-hint">Click to launch</div>
+        <button class="play-button" title="Launch ${emulator.name}">
+          <span class="play-icon">▶</span>
+        </button>
       </div>
     `;
 
@@ -249,6 +258,13 @@ class VelocityLauncher {
       if (!target.closest(".emulator-actions")) {
         this.launchEmulator(emulator);
       }
+    });
+
+    // Add play button event listener
+    const playButton = card.querySelector(".play-button");
+    playButton?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.launchEmulator(emulator);
     });
 
     // Add button event listeners
@@ -515,6 +531,75 @@ class VelocityLauncher {
       sortSelect.value = this.settings.sortBy || 'name';
       // Apply initial sort
       this.sortEmulators(this.settings.sortBy as keyof EmulatorConfig || 'name');
+    }
+  }
+
+  private detectSystemTheme(): void {
+    // Detect system preference
+    this.systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      this.systemPrefersDark = e.matches;
+      if (this.settings?.theme === 'auto') {
+        this.applyTheme('auto');
+      }
+    });
+  }
+
+  private initializeTheme(): void {
+    if (this.settings) {
+      this.applyTheme(this.settings.theme || 'auto');
+    }
+  }
+
+  private toggleTheme(): void {
+    if (!this.settings) return;
+
+    const themes: Array<'auto' | 'light' | 'dark'> = ['auto', 'light', 'dark'];
+    const currentIndex = themes.indexOf(this.settings.theme);
+    const nextTheme = themes[(currentIndex + 1) % themes.length];
+    
+    this.settings.theme = nextTheme;
+    this.applyTheme(nextTheme);
+    this.saveSettings();
+  }
+
+  private applyTheme(theme: 'light' | 'dark' | 'auto'): void {
+    const html = document.documentElement;
+    html.setAttribute('data-theme', theme);
+    
+    // Update theme icon
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+      const effectiveTheme = theme === 'auto' 
+        ? (this.systemPrefersDark ? 'dark' : 'light')
+        : theme;
+      
+      switch (theme) {
+        case 'auto':
+          themeIcon.textContent = '🖥️';
+          themeIcon.parentElement?.setAttribute('title', 'Theme: Auto (follows system)');
+          break;
+        case 'light':
+          themeIcon.textContent = '☀️';
+          themeIcon.parentElement?.setAttribute('title', 'Theme: Light');
+          break;
+        case 'dark':
+          themeIcon.textContent = '🌙';
+          themeIcon.parentElement?.setAttribute('title', 'Theme: Dark');
+          break;
+      }
+    }
+  }
+
+  private async saveSettings(): Promise<void> {
+    if (this.settings) {
+      try {
+        await (window as any).electronAPI.saveSettings(this.settings);
+      } catch (error) {
+        console.error("Error saving settings:", error);
+      }
     }
   }
 }

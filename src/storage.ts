@@ -7,7 +7,7 @@ export class StorageService {
   private readonly configPath: string;
   private readonly defaultSettings: LauncherSettings = {
     emulators: [],
-    theme: 'dark',
+    theme: 'auto',
     gridSize: 'medium',
     sortBy: 'name',
     showDescriptions: true
