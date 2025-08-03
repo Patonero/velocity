@@ -10,6 +10,11 @@ on:
       - "Claude.md"
   workflow_dispatch:
 
+# Cancel in-progress runs when a new one starts
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   SKIP_CI: ${{ contains(github.event.head_commit.message, '[skip ci]') }}
 
