@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +19,7 @@
     <title>Velocity Launcher</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="app">
         <header class="app-header">
@@ -47,14 +49,14 @@
                 </button>
             </div>
         </header>
-        
+
         <main class="app-main">
             <div id="empty-state" class="empty-state">
                 <div class="empty-content">
                     <div class="empty-icon">🎮</div>
                     <h2>Welcome to Velocity Launcher</h2>
                     <p class="empty-description">Your one-stop hub for organizing and launching emulators</p>
-                    
+
                     <div class="getting-started">
                         <h3>Getting Started</h3>
                         <div class="steps">
@@ -72,18 +74,19 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <button id="add-first-emulator-btn" class="btn btn-primary btn-large">
                         <span class="btn-icon">+</span>
                         Add Your First Emulator
                     </button>
-                    
+
                     <div class="supported-emulators">
-                        <p>Popular emulators: Dolphin, PCSX2, PPSSPP, RetroArch, Project64, and more!</p>
+                        <p>Popular emulators: RetroArch, Dolphin, PCSX2, PPSSPP, Project64, Cemu, RPCS3, Citra, and many
+                            more!</p>
                     </div>
                 </div>
             </div>
-            
+
             <div id="emulator-grid" class="emulator-grid hidden">
                 <!-- Emulator cards will be dynamically generated here -->
             </div>
@@ -100,40 +103,112 @@
             <form id="emulator-form" class="emulator-form">
                 <div class="form-section">
                     <h3 class="section-title">Basic Information</h3>
-                    
+
                     <div class="form-group">
                         <label for="emulator-name">Emulator Name *</label>
-                        <input type="text" id="emulator-name" name="name" required placeholder="e.g., Dolphin, PCSX2, RetroArch" class="form-input-primary">
+                        <input type="text" id="emulator-name" name="name" required
+                            placeholder="e.g., Dolphin, PCSX2, RetroArch" class="form-input-primary">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="emulator-type">System Type</label>
                         <select id="emulator-type" name="emulatorType" class="form-input-primary">
-                            <option value="GameCube/Wii">GameCube / Wii</option>
-                            <option value="PlayStation 2">PlayStation 2</option>
-                            <option value="Nintendo DS">Nintendo DS</option>
-                            <option value="Nintendo 3DS">Nintendo 3DS</option>
-                            <option value="PlayStation Portable">PlayStation Portable (PSP)</option>
-                            <option value="PlayStation 1">PlayStation 1</option>
-                            <option value="Nintendo 64">Nintendo 64</option>
-                            <option value="Multi-System">Multi-System</option>
-                            <option value="Other">Other</option>
+                            <!-- Multi-System Emulators -->
+                            <optgroup label="Multi-System">
+                                <option value="RetroArch">RetroArch (Libretro)</option>
+                                <option value="OpenEmu">OpenEmu</option>
+                                <option value="LaunchBox">LaunchBox / BigBox</option>
+                                <option value="Multi-System">Other Multi-System</option>
+                            </optgroup>
+
+                            <!-- Sony Systems -->
+                            <optgroup label="Sony">
+                                <option value="PlayStation 1">PlayStation 1 (PSX)</option>
+                                <option value="PlayStation 2">PlayStation 2 (PS2)</option>
+                                <option value="PlayStation 3">PlayStation 3 (PS3)</option>
+                                <option value="PlayStation Portable">PlayStation Portable (PSP)</option>
+                                <option value="PlayStation Vita">PlayStation Vita (PSVita)</option>
+                            </optgroup>
+
+                            <!-- Nintendo Systems -->
+                            <optgroup label="Nintendo">
+                                <option value="Nintendo Entertainment System">Nintendo Entertainment System (NES)
+                                </option>
+                                <option value="Super Nintendo">Super Nintendo (SNES)</option>
+                                <option value="Nintendo 64">Nintendo 64 (N64)</option>
+                                <option value="GameCube">Nintendo GameCube</option>
+                                <option value="Wii">Nintendo Wii</option>
+                                <option value="Wii U">Nintendo Wii U</option>
+                                <option value="Switch">Nintendo Switch</option>
+                                <option value="Game Boy">Game Boy / Game Boy Color</option>
+                                <option value="Game Boy Advance">Game Boy Advance (GBA)</option>
+                                <option value="Nintendo DS">Nintendo DS (NDS)</option>
+                                <option value="Nintendo 3DS">Nintendo 3DS</option>
+                            </optgroup>
+
+                            <!-- Sega Systems -->
+                            <optgroup label="Sega">
+                                <option value="Sega Master System">Sega Master System</option>
+                                <option value="Sega Genesis">Sega Genesis / Mega Drive</option>
+                                <option value="Sega Saturn">Sega Saturn</option>
+                                <option value="Sega Dreamcast">Sega Dreamcast</option>
+                                <option value="Sega Game Gear">Sega Game Gear</option>
+                                <option value="Sega CD">Sega CD / Mega CD</option>
+                                <option value="Sega 32X">Sega 32X</option>
+                            </optgroup>
+
+                            <!-- Microsoft Systems -->
+                            <optgroup label="Microsoft">
+                                <option value="Xbox">Original Xbox</option>
+                                <option value="Xbox 360">Xbox 360</option>
+                            </optgroup>
+
+                            <!-- Arcade Systems -->
+                            <optgroup label="Arcade">
+                                <option value="MAME">MAME (Multiple Arcade)</option>
+                                <option value="Neo Geo">SNK Neo Geo</option>
+                                <option value="CPS">Capcom Play System (CPS)</option>
+                                <option value="Cave">Cave Arcade</option>
+                            </optgroup>
+
+                            <!-- Atari Systems -->
+                            <optgroup label="Atari">
+                                <option value="Atari 2600">Atari 2600</option>
+                                <option value="Atari 5200">Atari 5200</option>
+                                <option value="Atari 7800">Atari 7800</option>
+                                <option value="Atari Lynx">Atari Lynx</option>
+                                <option value="Atari Jaguar">Atari Jaguar</option>
+                            </optgroup>
+
+                            <!-- Other Systems -->
+                            <optgroup label="Other Systems">
+                                <option value="NEC PC Engine">NEC PC Engine / TurboGrafx-16</option>
+                                <option value="3DO">3DO Interactive</option>
+                                <option value="Neo Geo Pocket">SNK Neo Geo Pocket</option>
+                                <option value="WonderSwan">Bandai WonderSwan</option>
+                                <option value="Virtual Boy">Nintendo Virtual Boy</option>
+                                <option value="Amstrad CPC">Amstrad CPC</option>
+                                <option value="MSX">MSX</option>
+                                <option value="Other">Other / Custom</option>
+                            </optgroup>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="emulator-description">Description (Optional)</label>
-                        <input type="text" id="emulator-description" name="description" placeholder="Brief description or notes">
+                        <input type="text" id="emulator-description" name="description"
+                            placeholder="Brief description or notes">
                     </div>
                 </div>
 
                 <div class="form-section">
                     <h3 class="section-title">Location & Settings</h3>
-                    
+
                     <div class="form-group form-group-important">
                         <label for="executable-path">Emulator Executable *</label>
                         <div class="file-input-group">
-                            <input type="text" id="executable-path" name="executablePath" required readonly placeholder="Click Browse to select .exe file" class="form-input-primary">
+                            <input type="text" id="executable-path" name="executablePath" required readonly
+                                placeholder="Click Browse to select .exe file" class="form-input-primary">
                             <button type="button" id="browse-executable-btn" class="btn btn-browse">
                                 <span class="btn-icon">📁</span>
                                 Browse
@@ -141,23 +216,26 @@
                         </div>
                         <p class="field-help">Select the main executable file (e.g., Dolphin.exe, pcsx2.exe)</p>
                     </div>
-                    
+
                     <div class="form-group-row">
                         <div class="form-group">
                             <label for="working-directory">Working Directory</label>
                             <div class="file-input-group">
-                                <input type="text" id="working-directory" name="workingDirectory" readonly placeholder="Auto-detect from executable">
-                                <button type="button" id="browse-workdir-btn" class="btn btn-secondary btn-sm">Browse</button>
+                                <input type="text" id="working-directory" name="workingDirectory" readonly
+                                    placeholder="Auto-detect from executable">
+                                <button type="button" id="browse-workdir-btn"
+                                    class="btn btn-secondary btn-sm">Browse</button>
                             </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="emulator-arguments">Launch Arguments</label>
-                            <input type="text" id="emulator-arguments" name="arguments" placeholder="--fullscreen --config-path">
+                            <input type="text" id="emulator-arguments" name="arguments"
+                                placeholder="--fullscreen --config-path">
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-actions">
                     <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
                     <button type="submit" class="btn btn-primary btn-submit">
@@ -186,7 +264,8 @@
             </div>
         </div>
     </div>
-    
+
     <script src="../dist/renderer.js"></script>
 </body>
+
 </html>

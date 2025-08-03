@@ -94,20 +94,20 @@ jobs:
           name: "Build ${{ steps.build-tag.outputs.tag }}"
           body: |
             ## Automated Build Release
-            
+
             **Build Information:**
             - Version: ${{ steps.build-tag.outputs.version }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
             - Timestamp: ${{ steps.build-tag.outputs.tag }}
-            
+
             **Included Files:**
-            - Windows Installer (NSIS) - `VelocityLauncher-Windows-Installer-x64.exe`
-            - Portable Executable - `VelocityLauncher-Windows-Portable.exe`
-            - Zip Archive - `VelocityLauncher-Windows-x64.zip`
-            
+            - Windows Installer - `Velocity.Launcher-${{ steps.build-tag.outputs.version }}-x64.exe`
+            - Portable Executable - `Velocity.Launcher-${{ steps.build-tag.outputs.version }}-portable.exe`
+            - Zip Archive - `Velocity.Launcher-${{ steps.build-tag.outputs.version }}-x64.zip`
+
             This is an automated build from the CI/CD pipeline.
-            
+
             ### Download Instructions:
             - **For most users**: Download the Windows Installer
             - **For portable use**: Download the Portable executable
@@ -115,9 +115,9 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.exe
-            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-portable.exe
-            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.zip
+            dist/VelocityLauncher-${{ steps.build-tag.outputs.version }}-x64.exe
+            dist/VelocityLauncher-${{ steps.build-tag.outputs.version }}-portable.exe
+            dist/VelocityLauncher-${{ steps.build-tag.outputs.version }}-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
