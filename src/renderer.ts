@@ -671,3 +671,8 @@ class VelocityLauncher {
 }
 
 new VelocityLauncher();
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { escapeHtml, isValidFilePath, sanitizeInput };
+}
