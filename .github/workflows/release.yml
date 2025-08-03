@@ -63,9 +63,9 @@ jobs:
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
           $commitHash = git rev-parse --short HEAD
-          $buildTag = "build-$timestamp-$commitHash"
           $packageJson = Get-Content package.json | ConvertFrom-Json
           $version = $packageJson.version
+          $buildTag = "v$version-$commitHash"
           echo "tag=$buildTag" >> $env:GITHUB_OUTPUT
           echo "version=$version" >> $env:GITHUB_OUTPUT
           echo "Generated build tag: $buildTag"
@@ -79,10 +79,11 @@ jobs:
 
       - name: Create and push tag
         run: |
+          $buildTag = "${{ steps.build-tag.outputs.tag }}"
           $buildVersion = "${{ steps.build-tag.outputs.version }}"
-          git tag $buildVersion -m "Release $buildVersion"
-          git push origin $buildVersion
-          echo "Created and pushed tag: $buildVersion"
+          git tag $buildTag -m "Release version $buildVersion - Build $buildTag"
+          git push origin $buildTag
+          echo "Created and pushed tag: $buildTag"
         shell: powershell
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
