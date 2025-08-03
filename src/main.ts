@@ -5,6 +5,31 @@ import * as fs from "fs";
 import { StorageService } from "./storage";
 import { IconService } from "./icon-service";
 
+// Enable hot-reload for development
+if (process.env.NODE_ENV === "development") {
+  try {
+    const chokidar = require("chokidar");
+    
+    // Watch renderer files (just reload the page for faster feedback)
+    const rendererWatcher = chokidar.watch(path.join(__dirname, "..", "renderer"));
+    
+    rendererWatcher.on("change", (filePath: string) => {
+      console.log(`🔄 Renderer file changed: ${path.basename(filePath)}`);
+      // Delay to ensure file is fully written
+      setTimeout(() => {
+        BrowserWindow.getAllWindows().forEach((win) => {
+          win.webContents.reloadIgnoringCache();
+        });
+      }, 100);
+    });
+    
+    console.log("🔥 Hot-reload enabled for development");
+    console.log("📁 Watching: dist/ (nodemon restart) & renderer/ (page reload)");
+  } catch (error) {
+    console.log("Hot-reload not available:", error);
+  }
+}
+
 // Security validation functions
 const isValidExecutablePath = (filePath: string): boolean => {
   try {
