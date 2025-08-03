@@ -1,5 +1,59 @@
 // No imports needed - we'll define types inline for browser compatibility
 
+// Security: HTML escaping to prevent XSS
+const escapeHtml = (text: string): string => {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
+// Security: Validate and sanitize file paths
+const isValidFilePath = (path: string): boolean => {
+  if (!path || typeof path !== 'string') {
+    return false;
+  }
+  
+  // Check for path traversal and dangerous patterns
+  const dangerousPatterns = [
+    /\.\.\//,         // Path traversal (Unix)
+    /\.\.\\/,         // Path traversal (Windows)
+    /[<>"|?*]/,       // Windows forbidden characters (excluding colon for drive letters)
+    /javascript:/i,   // Protocol injection
+    /data:/i,         // Data URLs
+    /vbscript:/i,     // VBScript injection
+    /^https?:/i,      // HTTP/HTTPS URLs
+    /^file:\/\/\//,   // File protocol with network path
+    /[\x00-\x1f]/     // Control characters
+  ];
+  
+  // Special handling for colons - allow only at position 1 for drive letters
+  if (path.includes(':')) {
+    const colonIndex = path.indexOf(':');
+    // Allow only if colon is at position 1 and preceded by a single letter (drive letter)
+    if (colonIndex !== 1 || !/^[a-zA-Z]:/.test(path)) {
+      return false;
+    }
+  }
+  
+  return !dangerousPatterns.some(pattern => pattern.test(path));
+};
+
+// Security: Sanitize user input
+const sanitizeInput = (input: string, maxLength: number = 1000): string => {
+  if (!input || typeof input !== 'string') {
+    return '';
+  }
+  
+  return input
+    .trim()
+    .substring(0, maxLength)
+    .replace(/[<>'"&]/g, ''); // Remove potential XSS characters
+};
+
 interface EmulatorConfig {
   id: string;
   name: string;
@@ -206,9 +260,21 @@ class VelocityLauncher {
       return new Date(date).toLocaleDateString();
     };
 
-    // Create icon element
-    const iconElement = emulator.iconPath 
-      ? `<img src="file://${emulator.iconPath}" alt="${emulator.name}" class="emulator-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    // Security: Validate and escape all user-provided data
+    const safeName = escapeHtml(emulator.name);
+    const safeType = escapeHtml(emulator.emulatorType);
+    const safeDescription = emulator.description ? escapeHtml(emulator.description) : '';
+    const safeId = escapeHtml(emulator.id);
+    
+    // Validate icon path for security
+    const safeIconPath = emulator.iconPath && isValidFilePath(emulator.iconPath) 
+      ? emulator.iconPath 
+      : null;
+      
+
+    // Create icon element with safe data
+    const iconElement = safeIconPath
+      ? `<img src="file://${safeIconPath}" alt="${safeName}" class="emulator-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
          <div class="emulator-icon-fallback" style="display: none;">🎮</div>`
       : `<div class="emulator-icon-fallback">🎮</div>`;
 
@@ -219,16 +285,16 @@ class VelocityLauncher {
             ${iconElement}
           </div>
           <div class="emulator-info">
-            <h3 class="emulator-name">${emulator.name}</h3>
-            <span class="emulator-type">${emulator.emulatorType}</span>
-            ${emulator.description ? `<p class="emulator-description">${emulator.description}</p>` : ''}
+            <h3 class="emulator-name">${safeName}</h3>
+            <span class="emulator-type">${safeType}</span>
+            ${safeDescription ? `<p class="emulator-description">${safeDescription}</p>` : ''}
           </div>
         </div>
         <div class="emulator-actions">
-          <button class="action-btn edit-btn" title="Edit configuration" data-emulator-id="${emulator.id}">
+          <button class="action-btn edit-btn" title="Edit configuration" data-emulator-id="${safeId}">
             <span class="action-icon">⚙️</span>
           </button>
-          <button class="action-btn delete-btn" title="Remove emulator" data-emulator-id="${emulator.id}">
+          <button class="action-btn delete-btn" title="Remove emulator" data-emulator-id="${safeId}">
             <span class="action-icon">🗑️</span>
           </button>
         </div>
@@ -246,7 +312,7 @@ class VelocityLauncher {
             </span>
           ` : ''}
         </div>
-        <button class="play-button" title="Launch ${emulator.name}">
+        <button class="play-button" title="Launch ${safeName}">
           <span class="play-icon">▶</span>
         </button>
       </div>

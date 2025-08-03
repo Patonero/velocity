@@ -3,6 +3,61 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { EmulatorConfig, LauncherSettings } from './types';
 
+// Security validation for storage operations
+const isValidEmulatorData = (emulator: any): boolean => {
+  // Check required fields
+  if (!emulator.name || typeof emulator.name !== 'string' || emulator.name.length > 100) {
+    return false;
+  }
+  
+  if (!emulator.executablePath || typeof emulator.executablePath !== 'string') {
+    return false;
+  }
+  
+  if (!emulator.emulatorType || typeof emulator.emulatorType !== 'string') {
+    return false;
+  }
+  
+  if (!emulator.platform || typeof emulator.platform !== 'string') {
+    return false;
+  }
+
+  // Validate optional fields
+  if (emulator.description && (typeof emulator.description !== 'string' || emulator.description.length > 500)) {
+    return false;
+  }
+  
+  if (emulator.arguments && (typeof emulator.arguments !== 'string' || emulator.arguments.length > 1000)) {
+    return false;
+  }
+  
+  if (emulator.workingDirectory && typeof emulator.workingDirectory !== 'string') {
+    return false;
+  }
+
+  // Check for path traversal in paths
+  const pathFields = ['executablePath', 'workingDirectory', 'iconPath'];
+  for (const field of pathFields) {
+    if (emulator[field] && emulator[field].includes('..')) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const sanitizeString = (str: string): string => {
+  if (!str || typeof str !== 'string') {
+    return '';
+  }
+  
+  // Remove potentially dangerous characters and limit length
+  return str
+    .replace(/[<>'"&]/g, '') // Remove HTML/JS injection characters
+    .trim()
+    .substring(0, 1000); // Limit length
+};
+
 export class StorageService {
   private readonly configPath: string;
   private readonly defaultSettings: LauncherSettings = {
@@ -55,12 +110,25 @@ export class StorageService {
   }
 
   public addEmulator(emulator: Omit<EmulatorConfig, 'id' | 'dateAdded' | 'launchCount'>): string {
+    // Validate input data
+    if (!isValidEmulatorData(emulator)) {
+      throw new Error('Invalid emulator data: validation failed');
+    }
+
     const settings = this.loadSettings();
     const id = this.generateId();
     
+    // Sanitize string inputs
     const newEmulator: EmulatorConfig = {
-      ...emulator,
       id,
+      name: sanitizeString(emulator.name),
+      description: emulator.description ? sanitizeString(emulator.description) : undefined,
+      executablePath: emulator.executablePath,
+      iconPath: emulator.iconPath,
+      arguments: emulator.arguments ? sanitizeString(emulator.arguments) : undefined,
+      workingDirectory: emulator.workingDirectory,
+      platform: sanitizeString(emulator.platform),
+      emulatorType: sanitizeString(emulator.emulatorType),
       dateAdded: new Date(),
       launchCount: 0
     };
@@ -72,12 +140,64 @@ export class StorageService {
   }
 
   public updateEmulator(id: string, updates: Partial<EmulatorConfig>): boolean {
+    // Validate ID
+    if (!id || typeof id !== 'string' || id.length > 50) {
+      return false;
+    }
+
     const settings = this.loadSettings();
     const index = settings.emulators.findIndex(e => e.id === id);
     
     if (index === -1) return false;
+
+    // Validate and sanitize updates
+    const sanitizedUpdates: Partial<EmulatorConfig> = {};
     
-    settings.emulators[index] = { ...settings.emulators[index], ...updates };
+    if (updates.name !== undefined) {
+      if (typeof updates.name !== 'string' || updates.name.length > 100) {
+        return false;
+      }
+      sanitizedUpdates.name = sanitizeString(updates.name);
+    }
+    
+    if (updates.description !== undefined) {
+      if (updates.description && (typeof updates.description !== 'string' || updates.description.length > 500)) {
+        return false;
+      }
+      sanitizedUpdates.description = updates.description ? sanitizeString(updates.description) : undefined;
+    }
+    
+    if (updates.arguments !== undefined) {
+      if (updates.arguments && (typeof updates.arguments !== 'string' || updates.arguments.length > 1000)) {
+        return false;
+      }
+      sanitizedUpdates.arguments = updates.arguments ? sanitizeString(updates.arguments) : undefined;
+    }
+
+    // Allow path and type updates but don't sanitize them (they're validated elsewhere)
+    if (updates.executablePath !== undefined) {
+      sanitizedUpdates.executablePath = updates.executablePath;
+    }
+    if (updates.workingDirectory !== undefined) {
+      sanitizedUpdates.workingDirectory = updates.workingDirectory;
+    }
+    if (updates.iconPath !== undefined) {
+      sanitizedUpdates.iconPath = updates.iconPath;
+    }
+    if (updates.emulatorType !== undefined) {
+      sanitizedUpdates.emulatorType = sanitizeString(updates.emulatorType);
+    }
+    if (updates.platform !== undefined) {
+      sanitizedUpdates.platform = sanitizeString(updates.platform);
+    }
+    if (updates.launchCount !== undefined) {
+      sanitizedUpdates.launchCount = updates.launchCount;
+    }
+    if (updates.lastLaunched !== undefined) {
+      sanitizedUpdates.lastLaunched = updates.lastLaunched;
+    }
+    
+    settings.emulators[index] = { ...settings.emulators[index], ...sanitizedUpdates };
     this.saveSettings(settings);
     
     return true;
@@ -107,6 +227,9 @@ export class StorageService {
   }
 
   private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    // Generate ID using only alphanumeric characters and hyphens for compatibility with icon service
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString().replace('0.', '');
+    return `emulator-${timestamp}-${random}`;
   }
 }
