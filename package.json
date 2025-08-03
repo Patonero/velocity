@@ -9,26 +9,97 @@
     "clean": "rimraf dist",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "electron": "npm run build && electron .",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "release": "npm run build && electron-builder --publish=always"
   },
   "keywords": [
     "electron",
     "typescript",
-    "desktop"
+    "desktop",
+    "emulator",
+    "launcher",
+    "gaming",
+    "retro"
   ],
-  "author": "",
-  "license": "ISC",
-  "description": "Velocity - An Electron TypeScript application",
+  "author": "Patonero",
+  "license": "MIT",
+  "description": "A modern, secure emulator launcher for Windows",
   "devDependencies": {
     "@jest/globals": "^30.0.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
     "electron": "^37.2.5",
+    "electron-builder": "^25.1.8",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "rimraf": "^6.0.1",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
+  },
+  "build": {
+    "appId": "com.velocity.launcher",
+    "productName": "Velocity Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Velocity Launcher"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Patonero",
+      "repo": "velocity"
+    }
   }
 }
