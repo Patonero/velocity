@@ -115,9 +115,9 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            dist/VelocityLauncher-${{ steps.build-tag.outputs.version }}-x64.exe
-            dist/VelocityLauncher-${{ steps.build-tag.outputs.version }}-portable.exe
-            dist/VelocityLauncher-${{ steps.build-tag.outputs.version }}-x64.zip
+            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.exe
+            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-portable.exe
+            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

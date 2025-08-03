@@ -52,6 +52,7 @@
     "directories": {
       "output": "dist"
     },
+    "icon": "assets/icon.png",
     "files": [
       "dist/**/*",
       "renderer/**/*",
@@ -110,6 +111,7 @@
           ]
         }
       ],
+      "icon": "assets/icon.png",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "asar": true,
