@@ -15,8 +15,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showOpenDialog: (options: any) => ipcRenderer.invoke('dialog:show-open-dialog', options),
   
   // Process operations
-  launchEmulator: (executablePath: string, args?: string, workingDirectory?: string) => 
-    ipcRenderer.invoke('process:launch-emulator', executablePath, args, workingDirectory),
+  launchEmulator: (emulatorId: string, executablePath: string, args?: string, workingDirectory?: string) => 
+    ipcRenderer.invoke('process:launch-emulator', emulatorId, executablePath, args, workingDirectory),
+  isEmulatorRunning: (emulatorId: string) =>
+    ipcRenderer.invoke('process:is-emulator-running', emulatorId),
+  getRunningEmulators: () =>
+    ipcRenderer.invoke('process:get-running-emulators'),
+  onEmulatorStopped: (callback: (emulatorId: string) => void) =>
+    ipcRenderer.on('emulator-stopped', (event, emulatorId) => callback(emulatorId)),
   
   // Icon operations
   extractIcon: (executablePath: string, emulatorId: string) =>

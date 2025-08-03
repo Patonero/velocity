@@ -672,6 +672,36 @@ body {
     line-height: 1;
 }
 
+/* Emulator Button States */
+.play-button.btn-launching {
+    background: var(--warning-gradient);
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.play-button.btn-running {
+    background: var(--danger-gradient);
+    cursor: not-allowed;
+    opacity: 0.9;
+}
+
+.play-button.btn-launching:hover,
+.play-button.btn-running:hover {
+    transform: none;
+    box-shadow: 0 4px 12px var(--shadow-primary);
+}
+
+/* Emulator Card States */
+.emulator-card.emulator-launching {
+    border-color: var(--warning);
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+}
+
+.emulator-card.emulator-running {
+    border-color: var(--danger);
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
+}
+
 .hidden {
     display: none !important;
 }

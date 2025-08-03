@@ -92,10 +92,13 @@ interface ElectronAPI {
   incrementLaunchCount: (id: string) => Promise<void>;
   showOpenDialog: (options: any) => Promise<any>;
   launchEmulator: (
+    emulatorId: string,
     executablePath: string,
     args?: string,
     workingDirectory?: string
   ) => Promise<any>;
+  isEmulatorRunning: (emulatorId: string) => Promise<{ isRunning: boolean; pid?: number }>;
+  getRunningEmulators: () => Promise<Array<{ id: string; pid: number }>>;
   extractIcon: (executablePath: string, emulatorId: string) => Promise<string | null>;
   cleanupIcons: (activeEmulatorIds: string[]) => Promise<boolean>;
 }
@@ -226,6 +229,11 @@ class VelocityLauncher {
     // Theme controls
     const themeToggle = document.getElementById("theme-toggle");
     themeToggle?.addEventListener("click", () => this.toggleTheme());
+
+    // Listen for emulator stopped events from main process
+    (window as any).electronAPI.onEmulatorStopped?.((emulatorId: string) => {
+      this.setEmulatorButtonState(emulatorId, 'stopped');
+    });
   }
 
   private renderEmulators(): void {
@@ -240,9 +248,19 @@ class VelocityLauncher {
       sortControls?.classList.remove("hidden");
       this.emulatorGrid.innerHTML = "";
 
-      this.settings.emulators.forEach((emulator) => {
+      this.settings.emulators.forEach(async (emulator) => {
         const card = this.createEmulatorCard(emulator);
         this.emulatorGrid!.appendChild(card);
+        
+        // Check if emulator is currently running and update button state
+        try {
+          const runningStatus = await (window as any).electronAPI.isEmulatorRunning(emulator.id);
+          if (runningStatus.isRunning) {
+            this.setEmulatorButtonState(emulator.id, 'running');
+          }
+        } catch (error) {
+          console.error(`Error checking running status for ${emulator.id}:`, error);
+        }
       });
     } else {
       this.emptyState.classList.remove("hidden");
@@ -467,7 +485,18 @@ class VelocityLauncher {
 
   private async launchEmulator(emulator: EmulatorConfig): Promise<void> {
     try {
+      // Check if emulator is already running
+      const runningStatus = await (window as any).electronAPI.isEmulatorRunning(emulator.id);
+      if (runningStatus.isRunning) {
+        alert(`${emulator.name} is already running (PID: ${runningStatus.pid}). Close it first to launch again.`);
+        return;
+      }
+
+      // Disable the play button while launching
+      this.setEmulatorButtonState(emulator.id, 'launching');
+
       const result = await (window as any).electronAPI.launchEmulator(
+        emulator.id,
         emulator.executablePath,
         emulator.arguments,
         emulator.workingDirectory
@@ -476,13 +505,51 @@ class VelocityLauncher {
       if (result.success) {
         await (window as any).electronAPI.incrementLaunchCount(emulator.id);
         await this.loadSettings();
+        this.setEmulatorButtonState(emulator.id, 'running');
         this.renderEmulators();
       } else {
-        alert(`Failed to launch emulator: ${result.error}`);
+        this.setEmulatorButtonState(emulator.id, 'stopped');
+        if (result.isAlreadyRunning) {
+          alert(`${emulator.name} is already running. Close it first to launch again.`);
+        } else {
+          alert(`Failed to launch emulator: ${result.error}`);
+        }
       }
     } catch (error) {
       console.error("Error launching emulator:", error);
+      this.setEmulatorButtonState(emulator.id, 'stopped');
       alert("Failed to launch emulator. Please check the executable path.");
+    }
+  }
+
+  private setEmulatorButtonState(emulatorId: string, state: 'stopped' | 'launching' | 'running'): void {
+    const playButton = document.querySelector(`[data-emulator-id="${emulatorId}"] .play-button`) as HTMLButtonElement;
+    const card = document.querySelector(`[data-emulator-id="${emulatorId}"]`) as HTMLElement;
+    
+    if (!playButton || !card) return;
+
+    // Remove all state classes
+    playButton.classList.remove('btn-launching', 'btn-running');
+    card.classList.remove('emulator-launching', 'emulator-running');
+
+    switch (state) {
+      case 'launching':
+        playButton.disabled = true;
+        playButton.innerHTML = '<span class="play-icon">⏳</span>';
+        playButton.classList.add('btn-launching');
+        card.classList.add('emulator-launching');
+        break;
+      case 'running':
+        playButton.disabled = true;
+        playButton.innerHTML = '<span class="play-icon">🔴</span>';
+        playButton.classList.add('btn-running');
+        card.classList.add('emulator-running');
+        break;
+      case 'stopped':
+      default:
+        playButton.disabled = false;
+        playButton.innerHTML = '<span class="play-icon">▶</span>';
+        break;
     }
   }
 

@@ -89,6 +89,8 @@ const isValidWorkingDirectory = (dirPath: string): boolean => {
 let mainWindow: BrowserWindow;
 let storageService: StorageService;
 let iconService: IconService;
+const launchedProcesses = new Set<number>();
+const runningEmulators = new Map<string, number>(); // emulatorId -> PID
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -116,6 +118,14 @@ function createWindow(): void {
 
   mainWindow.on("closed", () => {
     mainWindow = null as any;
+  });
+
+  // Handle app close events - don't kill child processes
+  mainWindow.on("close", (event) => {
+    if (launchedProcesses.size > 0) {
+      console.log(`Launcher closing with ${launchedProcesses.size} emulator(s) still running`);
+      console.log("Emulator processes will continue running independently");
+    }
   });
 
   if (process.env.NODE_ENV === "development") {
@@ -158,8 +168,19 @@ function setupIpcHandlers(): void {
   // Process handlers
   ipcMain.handle(
     "process:launch-emulator",
-    async (event, executablePath, args, workingDirectory) => {
+    async (event, emulatorId, executablePath, args, workingDirectory) => {
       try {
+        // Check if emulator is already running
+        if (runningEmulators.has(emulatorId)) {
+          const existingPid = runningEmulators.get(emulatorId);
+          console.log(`Emulator ${emulatorId} is already running with PID ${existingPid}`);
+          return { 
+            success: false, 
+            error: "This emulator is already running. Close it first to launch again.",
+            isAlreadyRunning: true
+          };
+        }
+
         // Security validation
         if (!isValidExecutablePath(executablePath)) {
           throw new Error(
@@ -177,7 +198,7 @@ function setupIpcHandlers(): void {
         const processArgs = sanitizeArguments(args);
 
         const options: any = {
-          detached: false, // Prevent process from outliving parent
+          detached: true, // Allow process to outlive parent
           stdio: ["ignore", "ignore", "ignore"], // Don't inherit stdio
         };
 
@@ -198,6 +219,30 @@ function setupIpcHandlers(): void {
           throw error;
         });
 
+        // Detach the child process so it can run independently
+        child.unref();
+
+        // Track the launched process
+        if (child.pid) {
+          launchedProcesses.add(child.pid);
+          runningEmulators.set(emulatorId, child.pid);
+          console.log(`Tracking emulator ${emulatorId} with PID: ${child.pid}`);
+        }
+
+        // Remove from tracking when process exits naturally
+        child.on("exit", (code, signal) => {
+          if (child.pid) {
+            launchedProcesses.delete(child.pid);
+            runningEmulators.delete(emulatorId);
+            console.log(`Emulator ${emulatorId} (PID: ${child.pid}) exited with code ${code}, signal ${signal}`);
+            
+            // Notify renderer that emulator has stopped
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('emulator-stopped', emulatorId);
+            }
+          }
+        });
+
         // Add timeout to prevent indefinite hanging
         const timeout = setTimeout(() => {
           if (!child.killed) {
@@ -216,6 +261,19 @@ function setupIpcHandlers(): void {
       }
     }
   );
+
+  // Check if emulator is running
+  ipcMain.handle("process:is-emulator-running", (event, emulatorId) => {
+    const isRunning = runningEmulators.has(emulatorId);
+    const pid = runningEmulators.get(emulatorId);
+    return { isRunning, pid };
+  });
+
+  // Get all running emulators
+  ipcMain.handle("process:get-running-emulators", () => {
+    const running = Array.from(runningEmulators.entries()).map(([id, pid]) => ({ id, pid }));
+    return running;
+  });
 
   // Icon handlers
   ipcMain.handle("icon:extract", async (event, executablePath, emulatorId) => {
@@ -256,8 +314,21 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  // Log running emulators before quit
+  if (launchedProcesses.size > 0) {
+    console.log(`App quitting with ${launchedProcesses.size} emulator(s) still running`);
+    console.log("Running emulator PIDs:", Array.from(launchedProcesses));
+  }
+  
   if (process.platform !== "darwin") {
     app.quit();
+  }
+});
+
+// Ensure clean shutdown without killing child processes
+app.on("before-quit", (event) => {
+  if (launchedProcesses.size > 0) {
+    console.log("App shutting down, leaving emulators running independently");
   }
 });
 
