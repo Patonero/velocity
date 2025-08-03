@@ -163,6 +163,19 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - 🔧 **Features**: Add new functionality
 - 🐛 **Bug Reports**: Help us improve reliability
 
+## 🗺️ Roadmap
+
+Here's what we're planning for future releases:
+
+### 🎨 Theme Editor (v2.0)
+
+- **Custom CSS Upload**: Import your own CSS themes for complete visual customization
+- **In-App Theme Editor**: Visual theme creator with color pickers and live preview
+- **Theme Sharing**: Export and share custom themes with the community
+- **Theme Gallery**: Browse and download community-created themes
+
+Want to suggest a feature? [Open a feature request](https://github.com/Patonero/velocity/issues/new?template=feature_request.md)!
+
 ## 📝 Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
