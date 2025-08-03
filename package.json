@@ -1,0 +1,27 @@
+{
+  "name": "velocity",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron .",
+    "dev": "tsc && electron .",
+    "clean": "rimraf dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "typescript",
+    "desktop"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Velocity - An Electron TypeScript application",
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "electron": "^37.2.5",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
