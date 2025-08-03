@@ -3,38 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Velocity</title>
+    <title>Velocity Launcher</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Velocity</h1>
-            <p>Your Electron TypeScript Application</p>
+    <div class="app">
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">Velocity Launcher</h1>
+                <p class="app-subtitle">Emulator Management Made Easy</p>
+            </div>
+            <div class="header-actions">
+                <button id="add-emulator-btn" class="btn btn-primary">
+                    <span class="btn-icon">+</span>
+                    Add Emulator
+                </button>
+            </div>
         </header>
         
-        <main>
-            <div class="welcome-section">
-                <h2>Welcome to Velocity</h2>
-                <p>This is a boilerplate Electron application built with TypeScript.</p>
-                <button id="get-started-btn" class="btn btn-primary">Get Started</button>
+        <main class="app-main">
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">🎮</div>
+                <h2>No Emulators Added Yet</h2>
+                <p>Get started by adding your first emulator to the launcher</p>
+                <button id="add-first-emulator-btn" class="btn btn-primary">Add Your First Emulator</button>
             </div>
             
-            <div class="info-section">
-                <div class="info-card">
-                    <h3>Electron</h3>
-                    <p>Cross-platform desktop apps with JavaScript, HTML, and CSS</p>
-                </div>
-                <div class="info-card">
-                    <h3>TypeScript</h3>
-                    <p>Strongly typed programming language that builds on JavaScript</p>
-                </div>
-                <div class="info-card">
-                    <h3>Ready to Build</h3>
-                    <p>Start adding your features and functionality</p>
-                </div>
+            <div id="emulator-grid" class="emulator-grid hidden">
+                <!-- Emulator cards will be dynamically generated here -->
             </div>
         </main>
+    </div>
+
+    <!-- Add Emulator Modal -->
+    <div id="add-emulator-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Emulator</h2>
+                <button id="close-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <form id="emulator-form" class="emulator-form">
+                <div class="form-group">
+                    <label for="emulator-name">Name *</label>
+                    <input type="text" id="emulator-name" name="name" required placeholder="e.g., Dolphin, PCSX2, RetroArch">
+                </div>
+                
+                <div class="form-group">
+                    <label for="emulator-description">Description</label>
+                    <input type="text" id="emulator-description" name="description" placeholder="Optional description">
+                </div>
+                
+                <div class="form-group">
+                    <label for="emulator-type">Emulator Type</label>
+                    <select id="emulator-type" name="emulatorType">
+                        <option value="GameCube/Wii">GameCube/Wii</option>
+                        <option value="PlayStation 2">PlayStation 2</option>
+                        <option value="Nintendo DS">Nintendo DS</option>
+                        <option value="Nintendo 3DS">Nintendo 3DS</option>
+                        <option value="PlayStation Portable">PlayStation Portable</option>
+                        <option value="Multi-System">Multi-System</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="executable-path">Executable Path *</label>
+                    <div class="file-input-group">
+                        <input type="text" id="executable-path" name="executablePath" required readonly placeholder="Select emulator executable">
+                        <button type="button" id="browse-executable-btn" class="btn btn-secondary">Browse</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="working-directory">Working Directory</label>
+                    <div class="file-input-group">
+                        <input type="text" id="working-directory" name="workingDirectory" readonly placeholder="Optional working directory">
+                        <button type="button" id="browse-workdir-btn" class="btn btn-secondary">Browse</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="emulator-arguments">Command Line Arguments</label>
+                    <input type="text" id="emulator-arguments" name="arguments" placeholder="Optional command line arguments">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Emulator</button>
+                </div>
+            </form>
+        </div>
     </div>
     
     <script src="../dist/renderer.js"></script>
