@@ -34,6 +34,17 @@ const mockDocument = {
   readyState: 'complete'
 };
 
+interface DialogResult {
+  canceled: boolean;
+  filePaths: string[];
+}
+
+interface LaunchResult {
+  success: boolean;
+  pid?: number;
+  error?: string;
+}
+
 const mockWindow = {
   electronAPI: {
     loadSettings: jest.fn().mockResolvedValue({
@@ -48,8 +59,8 @@ const mockWindow = {
     updateEmulator: jest.fn().mockResolvedValue(true),
     removeEmulator: jest.fn().mockResolvedValue(true),
     incrementLaunchCount: jest.fn().mockResolvedValue(undefined),
-    showOpenDialog: jest.fn().mockResolvedValue({ canceled: false, filePaths: [] }),
-    launchEmulator: jest.fn().mockResolvedValue({ success: true }),
+    showOpenDialog: jest.fn() as jest.MockedFunction<(options: any) => Promise<DialogResult>>,
+    launchEmulator: jest.fn() as jest.MockedFunction<(path: string, args?: string, workingDir?: string) => Promise<LaunchResult>>,
     extractIcon: jest.fn().mockResolvedValue(null),
     cleanupIcons: jest.fn().mockResolvedValue(true)
   },

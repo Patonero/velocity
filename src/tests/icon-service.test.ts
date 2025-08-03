@@ -24,7 +24,7 @@ const mockedSpawn = spawn as jest.MockedFunction<typeof spawn>;
 class MockChildProcess {
   stdout = { on: jest.fn() };
   stderr = { on: jest.fn() };
-  on = jest.fn();
+  on = jest.fn() as jest.MockedFunction<(event: string, callback: (code?: number) => void) => void>;
   kill = jest.fn();
   killed = false;
   pid = 12345;

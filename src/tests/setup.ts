@@ -4,6 +4,44 @@
 
 import { jest } from '@jest/globals';
 
+// Mock Electron APIs globally
+jest.mock('electron', () => require('./__mocks__/electron'));
+
+// Mock Node.js modules
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  readFileSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  mkdirSync: jest.fn(),
+  unlinkSync: jest.fn(),
+  readdirSync: jest.fn(() => []),
+  statSync: jest.fn(() => ({
+    isFile: () => true,
+    isDirectory: () => false
+  })),
+}));
+
+jest.mock('path', () => ({
+  join: jest.fn((...args: string[]) => {
+    // For storage tests, return expected Windows-style path format
+    if (args.includes('/mock/user/data') && args.includes('velocity-launcher-config.json')) {
+      return '/mock/user/data/velocity-launcher-config.json';
+    }
+    return args.join('/');
+  }),
+  dirname: jest.fn((path: string) => path.split('/').slice(0, -1).join('/')),
+  basename: jest.fn((path: string) => path.split('/').pop() || ''),
+  extname: jest.fn((path: string) => {
+    const parts = path.split('.');
+    return parts.length > 1 ? '.' + parts.pop() : '';
+  }),
+  resolve: jest.fn((...args: string[]) => '/' + args.join('/').replace(/\/+/g, '/')),
+}));
+
+jest.mock('child_process', () => ({
+  spawn: jest.fn(),
+}));
+
 // Mock global objects that might be used in tests
 global.console = {
   ...console,
