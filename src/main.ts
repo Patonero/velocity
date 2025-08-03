@@ -2,9 +2,11 @@ import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import { StorageService } from './storage';
+import { IconService } from './icon-service';
 
 let mainWindow: BrowserWindow;
 let storageService: StorageService;
+let iconService: IconService;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -90,10 +92,32 @@ function setupIpcHandlers(): void {
       return { success: false, error: (error as Error).message };
     }
   });
+
+  // Icon handlers
+  ipcMain.handle('icon:extract', async (event, executablePath, emulatorId) => {
+    try {
+      const iconPath = await iconService.extractIcon(executablePath, emulatorId);
+      return iconPath;
+    } catch (error) {
+      console.error('Error extracting icon:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('icon:cleanup', async (event, activeEmulatorIds) => {
+    try {
+      await iconService.cleanupUnusedIcons(activeEmulatorIds);
+      return true;
+    } catch (error) {
+      console.error('Error cleaning up icons:', error);
+      return false;
+    }
+  });
 }
 
 app.whenReady().then(() => {
   storageService = new StorageService();
+  iconService = new IconService();
   setupIpcHandlers();
   createWindow();
 

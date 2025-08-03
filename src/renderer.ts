@@ -42,6 +42,8 @@ interface ElectronAPI {
     args?: string,
     workingDirectory?: string
   ) => Promise<any>;
+  extractIcon: (executablePath: string, emulatorId: string) => Promise<string | null>;
+  cleanupIcons: (activeEmulatorIds: string[]) => Promise<boolean>;
 }
 
 // Initialize Velocity Launcher
@@ -52,6 +54,8 @@ class VelocityLauncher {
   private emptyState: HTMLElement | null = null;
   private addEmulatorModal: HTMLElement | null = null;
   private emulatorForm: HTMLFormElement | null = null;
+  private confirmationModal: HTMLElement | null = null;
+  private currentEditingId: string | null = null;
 
   constructor() {
     this.init();
@@ -71,6 +75,7 @@ class VelocityLauncher {
     await this.loadSettings();
     this.setupElements();
     this.setupEventListeners();
+    this.initializeSortSelect();
     this.renderEmulators();
   }
 
@@ -89,6 +94,7 @@ class VelocityLauncher {
     this.emulatorForm = document.getElementById(
       "emulator-form"
     ) as HTMLFormElement;
+    this.confirmationModal = document.getElementById("confirmation-modal");
   }
 
   private setupEventListeners(): void {
@@ -137,16 +143,40 @@ class VelocityLauncher {
         this.hideAddEmulatorModal();
       }
     });
+
+    // Confirmation modal event listeners
+    const confirmYesBtn = document.getElementById("confirm-yes-btn");
+    const confirmNoBtn = document.getElementById("confirm-no-btn");
+    const confirmCloseBtn = document.getElementById("confirm-close-btn");
+
+    confirmYesBtn?.addEventListener("click", () => this.handleConfirmYes());
+    confirmNoBtn?.addEventListener("click", () => this.hideConfirmationModal());
+    confirmCloseBtn?.addEventListener("click", () => this.hideConfirmationModal());
+
+    this.confirmationModal?.addEventListener("click", (e) => {
+      if (e.target === this.confirmationModal) {
+        this.hideConfirmationModal();
+      }
+    });
+
+    // Sort controls
+    const sortSelect = document.getElementById("sort-select");
+    sortSelect?.addEventListener("change", (e) => {
+      const target = e.target as HTMLSelectElement;
+      this.sortEmulators(target.value as keyof EmulatorConfig);
+    });
   }
 
   private renderEmulators(): void {
     if (!this.settings || !this.emulatorGrid || !this.emptyState) return;
 
     const hasEmulators = this.settings.emulators.length > 0;
+    const sortControls = document.getElementById("sort-controls");
 
     if (hasEmulators) {
       this.emptyState.classList.add("hidden");
       this.emulatorGrid.classList.remove("hidden");
+      sortControls?.classList.remove("hidden");
       this.emulatorGrid.innerHTML = "";
 
       this.settings.emulators.forEach((emulator) => {
@@ -156,6 +186,7 @@ class VelocityLauncher {
     } else {
       this.emptyState.classList.remove("hidden");
       this.emulatorGrid.classList.add("hidden");
+      sortControls?.classList.add("hidden");
     }
   }
 
@@ -168,27 +199,47 @@ class VelocityLauncher {
       return new Date(date).toLocaleDateString();
     };
 
+    // Create icon element
+    const iconElement = emulator.iconPath 
+      ? `<img src="file://${emulator.iconPath}" alt="${emulator.name}" class="emulator-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+         <div class="emulator-icon-fallback" style="display: none;">🎮</div>`
+      : `<div class="emulator-icon-fallback">🎮</div>`;
+
     card.innerHTML = `
-      <div class="emulator-card-header">
-        <div class="emulator-info">
-          <h3>${emulator.name}</h3>
-          <span class="emulator-type">${emulator.emulatorType}</span>
+      <div class="emulator-card-content">
+        <div class="emulator-main">
+          <div class="emulator-icon-container">
+            ${iconElement}
+          </div>
+          <div class="emulator-info">
+            <h3 class="emulator-name">${emulator.name}</h3>
+            <span class="emulator-type">${emulator.emulatorType}</span>
+            ${emulator.description ? `<p class="emulator-description">${emulator.description}</p>` : ''}
+          </div>
         </div>
         <div class="emulator-actions">
-          <button class="icon-btn edit-btn" title="Edit" data-emulator-id="${
-            emulator.id
-          }">✏️</button>
-          <button class="icon-btn delete-btn" title="Delete" data-emulator-id="${
-            emulator.id
-          }">🗑️</button>
+          <button class="action-btn edit-btn" title="Edit configuration" data-emulator-id="${emulator.id}">
+            <span class="action-icon">⚙️</span>
+          </button>
+          <button class="action-btn delete-btn" title="Remove emulator" data-emulator-id="${emulator.id}">
+            <span class="action-icon">🗑️</span>
+          </button>
         </div>
       </div>
-      <div class="emulator-description">${
-        emulator.description || "No description provided"
-      }</div>
-      <div class="emulator-stats">
-        <span>Added: ${formatDate(emulator.dateAdded)}</span>
-        <span>Launches: ${emulator.launchCount}</span>
+      <div class="emulator-launch-area">
+        <div class="emulator-stats">
+          <span class="stat-item">
+            <span class="stat-label">Launches:</span>
+            <span class="stat-value">${emulator.launchCount}</span>
+          </span>
+          ${emulator.lastLaunched ? `
+            <span class="stat-item">
+              <span class="stat-label">Last:</span>
+              <span class="stat-value">${formatDate(emulator.lastLaunched)}</span>
+            </span>
+          ` : ''}
+        </div>
+        <div class="launch-hint">Click to launch</div>
       </div>
     `;
 
@@ -219,11 +270,19 @@ class VelocityLauncher {
 
   private showAddEmulatorModal(): void {
     this.addEmulatorModal?.classList.remove("hidden");
-    this.emulatorForm?.reset();
+    if (!this.currentEditingId) {
+      this.emulatorForm?.reset();
+      // Reset modal to "Add" mode
+      const modalTitle = document.querySelector("#add-emulator-modal .modal-header h2");
+      const submitBtn = document.querySelector("#add-emulator-modal .btn-submit");
+      if (modalTitle) modalTitle.textContent = "Add New Emulator";
+      if (submitBtn) submitBtn.innerHTML = '<span class="btn-icon">✓</span>Add Emulator';
+    }
   }
 
   private hideAddEmulatorModal(): void {
     this.addEmulatorModal?.classList.add("hidden");
+    this.currentEditingId = null;
   }
 
   private async browseExecutable(): Promise<void> {
@@ -290,13 +349,37 @@ class VelocityLauncher {
     };
 
     try {
-      await (window as any).electronAPI.addEmulator(emulatorData);
+      if (this.currentEditingId) {
+        // Update existing emulator
+        const success = await (window as any).electronAPI.updateEmulator(this.currentEditingId, emulatorData);
+        if (success) {
+          // Extract icon if executable path changed
+          if (emulatorData.executablePath) {
+            const iconPath = await (window as any).electronAPI.extractIcon(emulatorData.executablePath, this.currentEditingId);
+            if (iconPath) {
+              await (window as any).electronAPI.updateEmulator(this.currentEditingId, { iconPath });
+            }
+          }
+        }
+      } else {
+        // Add new emulator
+        const emulatorId = await (window as any).electronAPI.addEmulator(emulatorData);
+        
+        // Extract icon for the newly added emulator
+        if (emulatorData.executablePath) {
+          const iconPath = await (window as any).electronAPI.extractIcon(emulatorData.executablePath, emulatorId);
+          if (iconPath) {
+            await (window as any).electronAPI.updateEmulator(emulatorId, { iconPath });
+          }
+        }
+      }
+      
       await this.loadSettings();
       this.renderEmulators();
       this.hideAddEmulatorModal();
     } catch (error) {
-      console.error("Error adding emulator:", error);
-      alert("Failed to add emulator. Please try again.");
+      console.error(this.currentEditingId ? "Error updating emulator:" : "Error adding emulator:", error);
+      alert(this.currentEditingId ? "Failed to update emulator. Please try again." : "Failed to add emulator. Please try again.");
     }
   }
 
@@ -322,19 +405,116 @@ class VelocityLauncher {
   }
 
   private editEmulator(id: string): void {
-    // TODO: Implement edit functionality
+    const emulator = this.settings?.emulators.find(e => e.id === id);
+    if (!emulator) return;
+
+    this.currentEditingId = id;
+    this.showAddEmulatorModal();
+
+    // Populate form with current emulator data
+    const nameInput = document.getElementById("emulator-name") as HTMLInputElement;
+    const typeSelect = document.getElementById("emulator-type") as HTMLSelectElement;
+    const descInput = document.getElementById("emulator-description") as HTMLInputElement;
+    const pathInput = document.getElementById("executable-path") as HTMLInputElement;
+    const argsInput = document.getElementById("emulator-arguments") as HTMLInputElement;
+    const workdirInput = document.getElementById("working-directory") as HTMLInputElement;
+
+    if (nameInput) nameInput.value = emulator.name;
+    if (typeSelect) typeSelect.value = emulator.emulatorType;
+    if (descInput) descInput.value = emulator.description || "";
+    if (pathInput) pathInput.value = emulator.executablePath;
+    if (argsInput) argsInput.value = emulator.arguments || "";
+    if (workdirInput) workdirInput.value = emulator.workingDirectory || "";
+
+    // Update modal title and button text
+    const modalTitle = document.querySelector("#add-emulator-modal .modal-header h2");
+    const submitBtn = document.querySelector("#add-emulator-modal .btn-submit");
+    if (modalTitle) modalTitle.textContent = "Edit Emulator";
+    if (submitBtn) submitBtn.innerHTML = '<span class="btn-icon">✓</span>Update Emulator';
   }
 
   private async deleteEmulator(id: string): Promise<void> {
-    if (confirm("Are you sure you want to delete this emulator?")) {
-      try {
-        await (window as any).electronAPI.removeEmulator(id);
-        await this.loadSettings();
-        this.renderEmulators();
-      } catch (error) {
-        console.error("Error deleting emulator:", error);
-        alert("Failed to delete emulator. Please try again.");
+    const emulator = this.settings?.emulators.find(e => e.id === id);
+    if (!emulator) return;
+
+    this.currentEditingId = id;
+    this.showConfirmationModal(
+      "Delete Emulator", 
+      `Are you sure you want to remove "${emulator.name}"? This action cannot be undone.`,
+      "Delete",
+      "Cancel"
+    );
+  }
+
+  private showConfirmationModal(title: string, message: string, confirmText: string, cancelText: string): void {
+    const titleEl = document.getElementById("confirm-title");
+    const messageEl = document.getElementById("confirm-message");
+    const confirmBtn = document.getElementById("confirm-yes-btn");
+    const cancelBtn = document.getElementById("confirm-no-btn");
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+    if (confirmBtn) confirmBtn.textContent = confirmText;
+    if (cancelBtn) cancelBtn.textContent = cancelText;
+
+    this.confirmationModal?.classList.remove("hidden");
+  }
+
+  private hideConfirmationModal(): void {
+    this.confirmationModal?.classList.add("hidden");
+    this.currentEditingId = null;
+  }
+
+  private async handleConfirmYes(): Promise<void> {
+    if (!this.currentEditingId) return;
+
+    try {
+      await (window as any).electronAPI.removeEmulator(this.currentEditingId);
+      await this.loadSettings();
+      this.renderEmulators();
+      this.hideConfirmationModal();
+    } catch (error) {
+      console.error("Error deleting emulator:", error);
+      alert("Failed to delete emulator. Please try again.");
+    }
+  }
+
+  private sortEmulators(sortBy: keyof EmulatorConfig): void {
+    if (!this.settings) return;
+
+    this.settings.emulators.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'dateAdded':
+          return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
+        case 'lastLaunched':
+          if (!a.lastLaunched && !b.lastLaunched) return 0;
+          if (!a.lastLaunched) return 1;
+          if (!b.lastLaunched) return -1;
+          return new Date(b.lastLaunched).getTime() - new Date(a.lastLaunched).getTime();
+        case 'launchCount':
+          return b.launchCount - a.launchCount;
+        case 'emulatorType':
+          return a.emulatorType.localeCompare(b.emulatorType);
+        default:
+          return 0;
       }
+    });
+
+    // Update settings with new sort order
+    this.settings.sortBy = sortBy as any;
+    (window as any).electronAPI.saveSettings(this.settings);
+    
+    this.renderEmulators();
+  }
+
+  private initializeSortSelect(): void {
+    const sortSelect = document.getElementById("sort-select") as HTMLSelectElement;
+    if (sortSelect && this.settings) {
+      sortSelect.value = this.settings.sortBy || 'name';
+      // Apply initial sort
+      this.sortEmulators(this.settings.sortBy as keyof EmulatorConfig || 'name');
     }
   }
 }

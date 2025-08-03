@@ -14,6 +14,16 @@
                 <p class="app-subtitle">Emulator Management Made Easy</p>
             </div>
             <div class="header-actions">
+                <div id="sort-controls" class="sort-controls hidden">
+                    <label for="sort-select" class="sort-label">Sort by:</label>
+                    <select id="sort-select" class="sort-select">
+                        <option value="name">Name</option>
+                        <option value="dateAdded">Date Added</option>
+                        <option value="lastLaunched">Last Used</option>
+                        <option value="launchCount">Launch Count</option>
+                        <option value="emulatorType">System Type</option>
+                    </select>
+                </div>
                 <button id="add-emulator-btn" class="btn btn-primary">
                     <span class="btn-icon">+</span>
                     Add Emulator
@@ -23,10 +33,38 @@
         
         <main class="app-main">
             <div id="empty-state" class="empty-state">
-                <div class="empty-icon">🎮</div>
-                <h2>No Emulators Added Yet</h2>
-                <p>Get started by adding your first emulator to the launcher</p>
-                <button id="add-first-emulator-btn" class="btn btn-primary">Add Your First Emulator</button>
+                <div class="empty-content">
+                    <div class="empty-icon">🎮</div>
+                    <h2>Welcome to Velocity Launcher</h2>
+                    <p class="empty-description">Your one-stop hub for organizing and launching emulators</p>
+                    
+                    <div class="getting-started">
+                        <h3>Getting Started</h3>
+                        <div class="steps">
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span class="step-text">Click "Add Emulator" below</span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span class="step-text">Browse for your emulator's .exe file</span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <span class="step-text">Click the emulator card to launch</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="add-first-emulator-btn" class="btn btn-primary btn-large">
+                        <span class="btn-icon">+</span>
+                        Add Your First Emulator
+                    </button>
+                    
+                    <div class="supported-emulators">
+                        <p>Popular emulators: Dolphin, PCSX2, PPSSPP, RetroArch, Project64, and more!</p>
+                    </div>
+                </div>
             </div>
             
             <div id="emulator-grid" class="emulator-grid hidden">
@@ -43,55 +81,92 @@
                 <button id="close-modal-btn" class="close-btn">&times;</button>
             </div>
             <form id="emulator-form" class="emulator-form">
-                <div class="form-group">
-                    <label for="emulator-name">Name *</label>
-                    <input type="text" id="emulator-name" name="name" required placeholder="e.g., Dolphin, PCSX2, RetroArch">
-                </div>
-                
-                <div class="form-group">
-                    <label for="emulator-description">Description</label>
-                    <input type="text" id="emulator-description" name="description" placeholder="Optional description">
-                </div>
-                
-                <div class="form-group">
-                    <label for="emulator-type">Emulator Type</label>
-                    <select id="emulator-type" name="emulatorType">
-                        <option value="GameCube/Wii">GameCube/Wii</option>
-                        <option value="PlayStation 2">PlayStation 2</option>
-                        <option value="Nintendo DS">Nintendo DS</option>
-                        <option value="Nintendo 3DS">Nintendo 3DS</option>
-                        <option value="PlayStation Portable">PlayStation Portable</option>
-                        <option value="Multi-System">Multi-System</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="executable-path">Executable Path *</label>
-                    <div class="file-input-group">
-                        <input type="text" id="executable-path" name="executablePath" required readonly placeholder="Select emulator executable">
-                        <button type="button" id="browse-executable-btn" class="btn btn-secondary">Browse</button>
+                <div class="form-section">
+                    <h3 class="section-title">Basic Information</h3>
+                    
+                    <div class="form-group">
+                        <label for="emulator-name">Emulator Name *</label>
+                        <input type="text" id="emulator-name" name="name" required placeholder="e.g., Dolphin, PCSX2, RetroArch" class="form-input-primary">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="emulator-type">System Type</label>
+                        <select id="emulator-type" name="emulatorType" class="form-input-primary">
+                            <option value="GameCube/Wii">GameCube / Wii</option>
+                            <option value="PlayStation 2">PlayStation 2</option>
+                            <option value="Nintendo DS">Nintendo DS</option>
+                            <option value="Nintendo 3DS">Nintendo 3DS</option>
+                            <option value="PlayStation Portable">PlayStation Portable (PSP)</option>
+                            <option value="PlayStation 1">PlayStation 1</option>
+                            <option value="Nintendo 64">Nintendo 64</option>
+                            <option value="Multi-System">Multi-System</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="emulator-description">Description (Optional)</label>
+                        <input type="text" id="emulator-description" name="description" placeholder="Brief description or notes">
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label for="working-directory">Working Directory</label>
-                    <div class="file-input-group">
-                        <input type="text" id="working-directory" name="workingDirectory" readonly placeholder="Optional working directory">
-                        <button type="button" id="browse-workdir-btn" class="btn btn-secondary">Browse</button>
+
+                <div class="form-section">
+                    <h3 class="section-title">Location & Settings</h3>
+                    
+                    <div class="form-group form-group-important">
+                        <label for="executable-path">Emulator Executable *</label>
+                        <div class="file-input-group">
+                            <input type="text" id="executable-path" name="executablePath" required readonly placeholder="Click Browse to select .exe file" class="form-input-primary">
+                            <button type="button" id="browse-executable-btn" class="btn btn-browse">
+                                <span class="btn-icon">📁</span>
+                                Browse
+                            </button>
+                        </div>
+                        <p class="field-help">Select the main executable file (e.g., Dolphin.exe, pcsx2.exe)</p>
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="emulator-arguments">Command Line Arguments</label>
-                    <input type="text" id="emulator-arguments" name="arguments" placeholder="Optional command line arguments">
+                    
+                    <div class="form-group-row">
+                        <div class="form-group">
+                            <label for="working-directory">Working Directory</label>
+                            <div class="file-input-group">
+                                <input type="text" id="working-directory" name="workingDirectory" readonly placeholder="Auto-detect from executable">
+                                <button type="button" id="browse-workdir-btn" class="btn btn-secondary btn-sm">Browse</button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="emulator-arguments">Launch Arguments</label>
+                            <input type="text" id="emulator-arguments" name="arguments" placeholder="--fullscreen --config-path">
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-actions">
                     <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Emulator</button>
+                    <button type="submit" class="btn btn-primary btn-submit">
+                        <span class="btn-icon">✓</span>
+                        Add Emulator
+                    </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal hidden">
+        <div class="modal-content confirmation-modal-content">
+            <div class="modal-header">
+                <h2 id="confirm-title">Confirm Action</h2>
+                <button id="confirm-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="confirmation-body">
+                <div class="confirmation-icon">⚠️</div>
+                <p id="confirm-message">Are you sure you want to perform this action?</p>
+            </div>
+            <div class="confirmation-actions">
+                <button id="confirm-no-btn" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-yes-btn" class="btn btn-danger">Delete</button>
+            </div>
         </div>
     </div>
     

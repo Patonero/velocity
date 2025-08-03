@@ -16,5 +16,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Process operations
   launchEmulator: (executablePath: string, args?: string, workingDirectory?: string) => 
-    ipcRenderer.invoke('process:launch-emulator', executablePath, args, workingDirectory)
+    ipcRenderer.invoke('process:launch-emulator', executablePath, args, workingDirectory),
+  
+  // Icon operations
+  extractIcon: (executablePath: string, emulatorId: string) =>
+    ipcRenderer.invoke('icon:extract', executablePath, emulatorId),
+  cleanupIcons: (activeEmulatorIds: string[]) =>
+    ipcRenderer.invoke('icon:cleanup', activeEmulatorIds)
 });
