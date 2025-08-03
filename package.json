@@ -38,6 +38,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   },
+  "dependencies": {},
   "build": {
     "appId": "com.velocity.launcher",
     "productName": "Velocity Launcher",
@@ -48,17 +49,39 @@
       "dist/**/*",
       "renderer/**/*",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/**/*.md",
+      "!node_modules/**/README*",
+      "!node_modules/**/LICENSE*",
+      "!node_modules/**/CHANGELOG*",
+      "!node_modules/**/*.d.ts.map",
+      "!node_modules/**/*.js.map",
+      "!node_modules/**/test/**",
+      "!node_modules/**/tests/**",
+      "!node_modules/**/__tests__/**",
+      "!node_modules/**/spec/**",
+      "!node_modules/**/.git*",
+      "!node_modules/**/docs/**",
+      "!node_modules/**/example/**",
+      "!node_modules/**/examples/**",
+      "!node_modules/**/*.flow",
+      "!dist/tests/**",
+      "!dist/**/*.d.ts.map",
+      "!dist/**/*.js.map"
     ],
     "extraResources": [
       {
         "from": "assets",
         "to": "assets",
         "filter": [
-          "**/*"
+          "**/*.png",
+          "**/*.ico",
+          "!**/README*"
         ]
       }
     ],
+    "compression": "maximum",
+    "removePackageScripts": true,
     "win": {
       "target": [
         {
@@ -81,7 +104,12 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "asar": true,
+      "asarUnpack": [
+        "node_modules/sharp/**/*",
+        "node_modules/better-sqlite3/**/*"
+      ]
     },
     "nsis": {
       "oneClick": false,

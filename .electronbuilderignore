@@ -1,0 +1,37 @@
+# Electron Builder Ignore File
+# Additional files to exclude from the build
+
+# Source files
+src/
+tsconfig*.json
+jest.config.js
+*.test.ts
+*.spec.ts
+
+# Development files
+.git*
+*.log
+coverage/
+docs/
+scripts/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts that shouldn't be included
+dist/tests/
+*.d.ts.map
+*.js.map
+
+# Documentation
+README.md
+CHANGELOG.md
+VERSIONING.md
+Claude.md
