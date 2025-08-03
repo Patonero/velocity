@@ -1,6 +1,6 @@
 {
   "name": "velocity",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
@@ -133,5 +133,9 @@
       "owner": "Patonero",
       "repo": "velocity"
     }
+  },
+  "dependencies": {
+    "electron-log": "^5.4.2",
+    "electron-updater": "^6.6.2"
   }
 }

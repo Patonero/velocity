@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, ipcMain, dialog } from "electron";
+import { autoUpdater } from "electron-updater";
 import { spawn } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
@@ -116,6 +117,53 @@ let storageService: StorageService;
 let iconService: IconService;
 const launchedProcesses = new Set<number>();
 const runningEmulators = new Map<string, number>(); // emulatorId -> PID
+
+// Configure auto-updater
+if (process.env.NODE_ENV !== "development") {
+  autoUpdater.logger = require("electron-log");
+  (autoUpdater.logger as any).transports.file.level = "info";
+  
+  // Auto-updater event listeners
+  autoUpdater.on('checking-for-update', () => {
+    console.log('Checking for update...');
+  });
+  
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-available', info);
+    }
+  });
+  
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('Update not available');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-not-available', info);
+    }
+  });
+  
+  autoUpdater.on('error', (err) => {
+    console.error('Update error:', err);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-error', err.message);
+    }
+  });
+  
+  autoUpdater.on('download-progress', (progressObj) => {
+    const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+    console.log(logMessage);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-progress', progressObj);
+    }
+  });
+  
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('update-downloaded', info);
+    }
+  });
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -323,6 +371,45 @@ function setupIpcHandlers(): void {
       return false;
     }
   });
+
+  // Update handlers
+  ipcMain.handle("updater:check-for-updates", async () => {
+    if (process.env.NODE_ENV === "development") {
+      return { available: false, message: "Updates disabled in development" };
+    }
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return { available: true, info: result?.updateInfo };
+    } catch (error) {
+      console.error("Error checking for updates:", error);
+      return { available: false, error: (error as Error).message };
+    }
+  });
+
+  ipcMain.handle("updater:download-update", async () => {
+    if (process.env.NODE_ENV === "development") {
+      return { success: false, message: "Updates disabled in development" };
+    }
+    try {
+      await autoUpdater.downloadUpdate();
+      return { success: true };
+    } catch (error) {
+      console.error("Error downloading update:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  ipcMain.handle("updater:install-update", () => {
+    if (process.env.NODE_ENV === "development") {
+      return { success: false, message: "Updates disabled in development" };
+    }
+    autoUpdater.quitAndInstall();
+    return { success: true };
+  });
+
+  ipcMain.handle("updater:get-version", () => {
+    return app.getVersion();
+  });
 }
 
 app.whenReady().then(() => {
@@ -330,6 +417,13 @@ app.whenReady().then(() => {
   iconService = new IconService();
   setupIpcHandlers();
   createWindow();
+
+  // Check for updates after window is created (only in production)
+  if (process.env.NODE_ENV !== "development") {
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify();
+    }, 3000); // Wait 3 seconds after startup
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

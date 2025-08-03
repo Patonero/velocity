@@ -39,6 +39,10 @@
                     </select>
                 </div>
                 <div class="theme-controls">
+                    <button id="update-btn" class="btn btn-secondary update-btn hidden" title="Update available">
+                        <span class="btn-icon">⬇</span>
+                        <span id="update-text">Update</span>
+                    </button>
                     <button id="theme-toggle" class="btn btn-secondary theme-toggle" title="Toggle theme">
                         <span id="theme-icon" class="theme-icon">🌙</span>
                     </button>
@@ -261,6 +265,38 @@
             <div class="confirmation-actions">
                 <button id="confirm-no-btn" class="btn btn-secondary">Cancel</button>
                 <button id="confirm-yes-btn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Modal -->
+    <div id="update-modal" class="modal hidden">
+        <div class="modal-content update-modal-content">
+            <div class="modal-header">
+                <h2 id="update-title">Update Available</h2>
+                <button id="update-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="update-body">
+                <div class="update-icon">⬇️</div>
+                <p id="update-message">A new version is available!</p>
+                <div id="update-details" class="update-details hidden">
+                    <p><strong>Current Version:</strong> <span id="current-version"></span></p>
+                    <p><strong>New Version:</strong> <span id="new-version"></span></p>
+                </div>
+                <div id="download-progress" class="progress-container hidden">
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progress-percent">0%</span>
+                        <span id="progress-speed"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="update-actions">
+                <button id="update-later-btn" class="btn btn-secondary">Later</button>
+                <button id="update-download-btn" class="btn btn-primary">Download Update</button>
+                <button id="update-install-btn" class="btn btn-success hidden">Install & Restart</button>
             </div>
         </div>
     </div>

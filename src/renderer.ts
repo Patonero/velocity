@@ -101,6 +101,19 @@ interface ElectronAPI {
   getRunningEmulators: () => Promise<Array<{ id: string; pid: number }>>;
   extractIcon: (executablePath: string, emulatorId: string) => Promise<string | null>;
   cleanupIcons: (activeEmulatorIds: string[]) => Promise<boolean>;
+  
+  // Update operations
+  checkForUpdates: () => Promise<{ available: boolean; info?: any; error?: string; message?: string }>;
+  downloadUpdate: () => Promise<{ success: boolean; error?: string; message?: string }>;
+  installUpdate: () => Promise<{ success: boolean; error?: string; message?: string }>;
+  getVersion: () => Promise<string>;
+  
+  // Update event listeners
+  onUpdateAvailable?: (callback: (info: any) => void) => void;
+  onUpdateNotAvailable?: (callback: (info: any) => void) => void;
+  onUpdateError?: (callback: (error: string) => void) => void;
+  onDownloadProgress?: (callback: (progress: any) => void) => void;
+  onUpdateDownloaded?: (callback: (info: any) => void) => void;
 }
 
 // Initialize Velocity Launcher
@@ -112,8 +125,10 @@ class VelocityLauncher {
   private addEmulatorModal: HTMLElement | null = null;
   private emulatorForm: HTMLFormElement | null = null;
   private confirmationModal: HTMLElement | null = null;
+  private updateModal: HTMLElement | null = null;
   private currentEditingId: string | null = null;
   private systemPrefersDark: boolean = false;
+  private updateInfo: any = null;
 
   constructor() {
     this.init();
@@ -137,6 +152,7 @@ class VelocityLauncher {
     this.initializeTheme();
     this.initializeSortSelect();
     this.renderEmulators();
+    this.setupUpdateListeners();
   }
 
   private async loadSettings(): Promise<void> {
@@ -155,6 +171,7 @@ class VelocityLauncher {
       "emulator-form"
     ) as HTMLFormElement;
     this.confirmationModal = document.getElementById("confirmation-modal");
+    this.updateModal = document.getElementById("update-modal");
   }
 
   private setupEventListeners(): void {
@@ -233,6 +250,27 @@ class VelocityLauncher {
     // Listen for emulator stopped events from main process
     (window as any).electronAPI.onEmulatorStopped?.((emulatorId: string) => {
       this.setEmulatorButtonState(emulatorId, 'stopped');
+    });
+
+    // Update button event listener
+    const updateBtn = document.getElementById("update-btn");
+    updateBtn?.addEventListener("click", () => this.showUpdateModal());
+
+    // Update modal event listeners
+    const updateCloseBtn = document.getElementById("update-close-btn");
+    const updateLaterBtn = document.getElementById("update-later-btn");
+    const updateDownloadBtn = document.getElementById("update-download-btn");
+    const updateInstallBtn = document.getElementById("update-install-btn");
+
+    updateCloseBtn?.addEventListener("click", () => this.hideUpdateModal());
+    updateLaterBtn?.addEventListener("click", () => this.hideUpdateModal());
+    updateDownloadBtn?.addEventListener("click", () => this.downloadUpdate());
+    updateInstallBtn?.addEventListener("click", () => this.installUpdate());
+
+    this.updateModal?.addEventListener("click", (e) => {
+      if (e.target === this.updateModal) {
+        this.hideUpdateModal();
+      }
     });
   }
 
@@ -733,6 +771,180 @@ class VelocityLauncher {
       } catch (error) {
         console.error("Error saving settings:", error);
       }
+    }
+  }
+
+  // Update-related methods
+  private setupUpdateListeners(): void {
+    const electronAPI = (window as any).electronAPI;
+    
+    // Set up update event listeners
+    electronAPI.onUpdateAvailable?.((info: any) => {
+      console.log('Update available:', info);
+      this.updateInfo = info;
+      this.showUpdateButton();
+      this.showUpdateModal();
+    });
+
+    electronAPI.onUpdateNotAvailable?.((info: any) => {
+      console.log('No update available');
+    });
+
+    electronAPI.onUpdateError?.((error: string) => {
+      console.error('Update error:', error);
+      alert(`Update error: ${error}`);
+    });
+
+    electronAPI.onDownloadProgress?.((progress: any) => {
+      this.updateDownloadProgress(progress);
+    });
+
+    electronAPI.onUpdateDownloaded?.((info: any) => {
+      console.log('Update downloaded:', info);
+      this.showInstallButton();
+    });
+
+    // Get current version and display it
+    this.loadCurrentVersion();
+  }
+
+  private async loadCurrentVersion(): Promise<void> {
+    try {
+      const version = await (window as any).electronAPI.getVersion();
+      const currentVersionElement = document.getElementById('current-version');
+      if (currentVersionElement) {
+        currentVersionElement.textContent = version;
+      }
+    } catch (error) {
+      console.error('Error getting version:', error);
+    }
+  }
+
+  private showUpdateButton(): void {
+    const updateBtn = document.getElementById("update-btn");
+    if (updateBtn) {
+      updateBtn.classList.remove("hidden");
+    }
+  }
+
+  private hideUpdateButton(): void {
+    const updateBtn = document.getElementById("update-btn");
+    if (updateBtn) {
+      updateBtn.classList.add("hidden");
+    }
+  }
+
+  private showUpdateModal(): void {
+    if (!this.updateModal) return;
+
+    // Update modal content with version info
+    if (this.updateInfo) {
+      const newVersionElement = document.getElementById('new-version');
+      const updateMessageElement = document.getElementById('update-message');
+      const updateDetailsElement = document.getElementById('update-details');
+      
+      if (newVersionElement) {
+        newVersionElement.textContent = this.updateInfo.version;
+      }
+      if (updateMessageElement) {
+        updateMessageElement.textContent = `Version ${this.updateInfo.version} is now available!`;
+      }
+      if (updateDetailsElement) {
+        updateDetailsElement.classList.remove('hidden');
+      }
+    }
+
+    this.updateModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  private hideUpdateModal(): void {
+    if (!this.updateModal) return;
+    this.updateModal.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  private async downloadUpdate(): Promise<void> {
+    try {
+      const downloadBtn = document.getElementById('update-download-btn') as HTMLButtonElement;
+      const progressContainer = document.getElementById('download-progress');
+      
+      if (downloadBtn) {
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'Downloading...';
+      }
+      
+      if (progressContainer) {
+        progressContainer.classList.remove('hidden');
+      }
+
+      const result = await (window as any).electronAPI.downloadUpdate();
+      
+      if (!result.success) {
+        throw new Error(result.error || result.message || 'Download failed');
+      }
+    } catch (error) {
+      console.error('Error downloading update:', error);
+      alert(`Failed to download update: ${error}`);
+      
+      // Reset button state
+      const downloadBtn = document.getElementById('update-download-btn') as HTMLButtonElement;
+      if (downloadBtn) {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download Update';
+      }
+    }
+  }
+
+  private updateDownloadProgress(progress: any): void {
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressSpeed = document.getElementById('progress-speed');
+
+    if (progressFill) {
+      progressFill.style.width = `${progress.percent}%`;
+    }
+    
+    if (progressPercent) {
+      progressPercent.textContent = `${Math.round(progress.percent)}%`;
+    }
+    
+    if (progressSpeed && progress.bytesPerSecond) {
+      const speedMB = (progress.bytesPerSecond / 1024 / 1024).toFixed(1);
+      progressSpeed.textContent = `${speedMB} MB/s`;
+    }
+  }
+
+  private showInstallButton(): void {
+    const downloadBtn = document.getElementById('update-download-btn');
+    const installBtn = document.getElementById('update-install-btn');
+    const updateMessage = document.getElementById('update-message');
+    
+    if (downloadBtn) {
+      downloadBtn.classList.add('hidden');
+    }
+    
+    if (installBtn) {
+      installBtn.classList.remove('hidden');
+    }
+    
+    if (updateMessage) {
+      updateMessage.textContent = 'Update downloaded successfully! Ready to install.';
+    }
+  }
+
+  private async installUpdate(): Promise<void> {
+    try {
+      const result = await (window as any).electronAPI.installUpdate();
+      
+      if (!result.success) {
+        throw new Error(result.error || result.message || 'Install failed');
+      }
+      
+      // The app will restart automatically after this
+    } catch (error) {
+      console.error('Error installing update:', error);
+      alert(`Failed to install update: ${error}`);
     }
   }
 }

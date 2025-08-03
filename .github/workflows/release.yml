@@ -79,10 +79,10 @@ jobs:
 
       - name: Create and push tag
         run: |
-          $buildTag = "${{ steps.build-tag.outputs.tag }}"
-          git tag $buildTag
-          git push origin $buildTag
-          echo "Created and pushed tag: $buildTag"
+          $buildVersion = "${{ steps.build-tag.outputs.version }}"
+          git tag $buildVersion -m "Release $buildVersion"
+          git push origin $buildVersion
+          echo "Created and pushed tag: $buildVersion"
         shell: powershell
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

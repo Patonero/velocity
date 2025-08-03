@@ -702,6 +702,99 @@ body {
     box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
 }
 
+/* Update UI Styles */
+.update-btn {
+    margin-right: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.update-btn::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.update-modal-content {
+    max-width: 500px;
+    text-align: center;
+}
+
+.update-body {
+    padding: 20px;
+}
+
+.update-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+}
+
+.update-details {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+    text-align: left;
+}
+
+.progress-container {
+    margin: 20px 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.update-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 20px;
+    border-top: 1px solid var(--border-primary);
+}
+
+.btn-success {
+    background: var(--success-gradient);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: var(--success-dark);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
 .hidden {
     display: none !important;
 }

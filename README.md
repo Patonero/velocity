@@ -45,6 +45,7 @@ _Velocity Launcher's clean, dark-themed interface_
    - **Working Directory**: Optional working directory (usually the emulator's folder)
 
 ![Add Emulator Dialog](docs/images/add-emulator-dialog.png)
+
 _Easy emulator configuration_
 
 3. **Click "Add Emulator"** to save
