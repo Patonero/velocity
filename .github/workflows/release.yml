@@ -58,14 +58,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate build tag
+      - name: Generate build tag and get version
         id: build-tag
         run: |
           $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
           $commitHash = git rev-parse --short HEAD
           $buildTag = "build-$timestamp-$commitHash"
+          $packageJson = Get-Content package.json | ConvertFrom-Json
+          $version = $packageJson.version
           echo "tag=$buildTag" >> $env:GITHUB_OUTPUT
+          echo "version=$version" >> $env:GITHUB_OUTPUT
           echo "Generated build tag: $buildTag"
+          echo "Package version: $version"
         shell: powershell
 
       - name: Configure Git
@@ -83,7 +87,41 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload build artifacts
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.build-tag.outputs.tag }}
+          name: "Build ${{ steps.build-tag.outputs.tag }}"
+          body: |
+            ## Automated Build Release
+            
+            **Build Information:**
+            - Version: ${{ steps.build-tag.outputs.version }}
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Timestamp: ${{ steps.build-tag.outputs.tag }}
+            
+            **Included Files:**
+            - Windows Installer (NSIS) - `VelocityLauncher-Windows-Installer-x64.exe`
+            - Portable Executable - `VelocityLauncher-Windows-Portable.exe`
+            - Zip Archive - `VelocityLauncher-Windows-x64.zip`
+            
+            This is an automated build from the CI/CD pipeline.
+            
+            ### Download Instructions:
+            - **For most users**: Download the Windows Installer
+            - **For portable use**: Download the Portable executable
+            - **For manual extraction**: Download the Zip archive
+          draft: false
+          prerelease: true
+          files: |
+            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.exe
+            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-portable.exe
+            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts (backup)
         uses: actions/upload-artifact@v4
         with:
           name: velocity-launcher-${{ steps.build-tag.outputs.tag }}
