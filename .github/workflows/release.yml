@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build and Tag
 
 on:
   push:
@@ -14,7 +14,7 @@ env:
   SKIP_CI: ${{ contains(github.event.head_commit.message, '[skip ci]') }}
 
 jobs:
-  build-and-release:
+  build-and-tag:
     runs-on: windows-latest
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
 
@@ -22,7 +22,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all history for changelog generation
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
@@ -36,82 +36,6 @@ jobs:
 
       - name: Build TypeScript
         run: npm run build
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: Determine version bump type
-        id: version-bump
-        run: |
-          # Check commit messages for version bump type
-          $commits = git log --pretty=format:"%s" --no-merges -10
-          $bumpType = "patch"  # default to patch
-
-          foreach ($commit in $commits) {
-            if ($commit -match "BREAKING CHANGE|major:") {
-              $bumpType = "major"
-              break
-            } elseif ($commit -match "feat:|feature:|minor:") {
-              $bumpType = "minor"
-              break
-            }
-          }
-
-          echo "bump-type=$bumpType" >> $env:GITHUB_OUTPUT
-          echo "Determined version bump type: $bumpType"
-        shell: powershell
-
-      - name: Bump version
-        id: version-bump-action
-        run: |
-          $bumpType = "${{ steps.version-bump.outputs.bump-type }}"
-
-          # Get current version
-          $packageJson = Get-Content package.json | ConvertFrom-Json
-          $currentVersion = $packageJson.version
-          echo "Current version: $currentVersion"
-
-          # Parse version
-          $versionParts = $currentVersion.Split('.')
-          $major = [int]$versionParts[0]
-          $minor = [int]$versionParts[1]
-          $patch = [int]$versionParts[2]
-
-          # Bump version based on type
-          switch ($bumpType) {
-            "major" {
-              $major++
-              $minor = 0
-              $patch = 0
-            }
-            "minor" {
-              $minor++
-              $patch = 0
-            }
-            "patch" {
-              $patch++
-            }
-          }
-
-          $newVersion = "$major.$minor.$patch"
-          echo "New version: $newVersion"
-
-          # Update package.json
-          $packageJson.version = $newVersion
-          $packageJson | ConvertTo-Json -Depth 100 | Set-Content package.json
-
-          # Commit version bump
-          git add package.json
-          git commit -m "chore: bump version to $newVersion [skip ci]"
-          git push origin main
-
-          echo "new-version=$newVersion" >> $env:GITHUB_OUTPUT
-          echo "version-tag=v$newVersion" >> $env:GITHUB_OUTPUT
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Electron Builder
         run: npm install -g electron-builder
@@ -131,108 +55,27 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set version outputs
-        id: package-version
+      - name: Generate build tag
+        id: build-tag
         run: |
-          $version = "${{ steps.version-bump-action.outputs.new-version }}"
-          $versionTag = "${{ steps.version-bump-action.outputs.version-tag }}"
-          echo "version=$versionTag" >> $env:GITHUB_OUTPUT
-          echo "raw-version=$version" >> $env:GITHUB_OUTPUT
-          echo "Using version: $versionTag"
+          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+          $commitHash = git rev-parse --short HEAD
+          $buildTag = "build-$timestamp-$commitHash"
+          echo "tag=$buildTag" >> $env:GITHUB_OUTPUT
+          echo "Generated build tag: $buildTag"
         shell: powershell
 
-      - name: Generate changelog
-        id: changelog
+      - name: Configure Git
         run: |
-          # Get the latest tag
-          $latestTag = git describe --tags --abbrev=0 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            $latestTag = ""
-          }
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
 
-          # Generate changelog since last tag
-          if ($latestTag) {
-            $changelog = git log --pretty=format:"- %s (%h)" "$latestTag..HEAD" --no-merges
-          } else {
-            $changelog = git log --pretty=format:"- %s (%h)" --no-merges
-          }
-
-          # Create changelog content
-          $changelogContent = @"
-          ## What's Changed
-
-          $changelog
-
-          ## Security
-          - Built with comprehensive security protections
-          - Input validation and sanitization
-          - Secure process execution
-          - XSS prevention and Content Security Policy
-
-          ## Installation
-          1. Download the installer below
-          2. Extract to your preferred location
-          3. Run Velocity Launcher.exe
-
-          **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ steps.package-version.outputs.version }}
-          "@
-
-          # Save changelog to file and output
-          $changelogContent | Out-File -FilePath "RELEASE_CHANGELOG.md" -Encoding UTF8
-
-          # Prepare for GitHub output (escape newlines)
-          $escapedChangelog = $changelogContent -replace "`r`n", "%0A" -replace "`n", "%0A"
-          echo "content=$escapedChangelog" >> $env:GITHUB_OUTPUT
-        shell: powershell
-
-      - name: Check if release exists
-        id: check-release
+      - name: Create and push tag
         run: |
-          $version = "${{ steps.package-version.outputs.version }}"
-          try {
-            $release = gh release view $version 2>$null
-            if ($LASTEXITCODE -eq 0) {
-              echo "exists=true" >> $env:GITHUB_OUTPUT
-              echo "Release $version already exists"
-            } else {
-              echo "exists=false" >> $env:GITHUB_OUTPUT
-              echo "Release $version does not exist"
-            }
-          } catch {
-            echo "exists=false" >> $env:GITHUB_OUTPUT
-            echo "Release $version does not exist"
-          }
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release
-        if: steps.check-release.outputs.exists == 'false'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.package-version.outputs.version }}
-          name: "Velocity Launcher ${{ steps.package-version.outputs.version }}"
-          body_path: RELEASE_CHANGELOG.md
-          files: |
-            dist/*.exe
-            dist/*.zip
-            dist/*.msi
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update existing release
-        if: steps.check-release.outputs.exists == 'true'
-        run: |
-          $version = "${{ steps.package-version.outputs.version }}"
-          echo "Release $version already exists, updating with new assets..."
-
-          # Upload additional assets to existing release
-          $files = Get-ChildItem -Path "dist" -Include "*.exe", "*.zip", "*.msi" -Recurse
-          foreach ($file in $files) {
-            gh release upload $version $file.FullName --clobber
-          }
+          $buildTag = "${{ steps.build-tag.outputs.tag }}"
+          git tag $buildTag
+          git push origin $buildTag
+          echo "Created and pushed tag: $buildTag"
         shell: powershell
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -240,7 +83,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: velocity-launcher-${{ steps.package-version.outputs.version }}
+          name: velocity-launcher-${{ steps.build-tag.outputs.tag }}
           path: |
             dist/*.exe
             dist/*.zip
