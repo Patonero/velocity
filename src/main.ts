@@ -129,6 +129,10 @@ const runningEmulators = new Map<string, number>(); // emulatorId -> PID
 if (process.env.NODE_ENV !== "development") {
   autoUpdater.logger = require("electron-log");
   (autoUpdater.logger as any).transports.file.level = "info";
+  
+  // Configure for silent updates
+  autoUpdater.autoDownload = false; // We'll control the download timing
+  autoUpdater.autoInstallOnAppQuit = false; // We'll control the install timing
 
   // Auto-updater event listeners
   autoUpdater.on("checking-for-update", () => {
@@ -155,7 +159,14 @@ if (process.env.NODE_ENV !== "development") {
     console.error("Update error:", err);
     const targetWindow = splashWindow || mainWindow;
     if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("update-error", err.message);
+      // Provide user-friendly error messages
+      let errorMessage = err.message;
+      if (err.message.includes("EACCES") || err.message.includes("permission")) {
+        errorMessage = "Update failed: Please restart as administrator or check file permissions";
+      } else if (err.message.includes("network") || err.message.includes("ENOTFOUND")) {
+        errorMessage = "Update failed: Check your internet connection";
+      }
+      targetWindow.webContents.send("update-error", errorMessage);
     }
   });
 
@@ -478,7 +489,12 @@ function setupIpcHandlers(): void {
     if (process.env.NODE_ENV === "development") {
       return { success: false, message: "Updates disabled in development" };
     }
-    autoUpdater.quitAndInstall();
+    
+    // Silent installation - no user interaction required
+    autoUpdater.quitAndInstall(
+      false, // isSilent: true for silent install
+      true   // isForceRunAfter: restart app after install
+    );
     return { success: true };
   });
 

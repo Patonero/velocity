@@ -104,7 +104,15 @@ export class UpdateService {
         });
 
         // Start the check
-        autoUpdater.checkForUpdates().catch(reject);
+        autoUpdater.checkForUpdates().then((result) => {
+          // If update is available, automatically start download
+          if (result && result.updateInfo) {
+            console.log('Auto-starting download for available update');
+            autoUpdater.downloadUpdate().catch((downloadError) => {
+              console.error('Auto-download failed:', downloadError);
+            });
+          }
+        }).catch(reject);
       });
 
       // Race between timeout and update check

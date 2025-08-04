@@ -40,10 +40,10 @@ class SplashController {
       this.showState("update-available");
       this.updateVersionInfo(info.version);
 
-      // Auto-start download after 2 seconds
+      // Auto-start download after brief pause
       setTimeout(() => {
         this.downloadUpdate();
-      }, 2000);
+      }, 1000);
     });
 
     splashAPI.onDownloadProgress?.((progress: any) => {
@@ -52,10 +52,10 @@ class SplashController {
 
     splashAPI.onUpdateDownloaded?.((info: any) => {
       this.showState("installing");
-      // Auto-install after brief pause
+      // Auto-install immediately for seamless experience
       setTimeout(() => {
         this.installUpdate();
-      }, 1500);
+      }, 800);
     });
 
     splashAPI.onUpdateError?.((error: string) => {

@@ -13,7 +13,8 @@
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
-    "release": "npm run build && electron-builder --publish=always"
+    "release": "npm run build && electron-builder --publish=always",
+    "release:delta": "npm run build && electron-builder --win --publish=never --config.nsis.differentialPackage=true"
   },
   "keywords": [
     "electron",
@@ -90,6 +91,8 @@
     ],
     "compression": "maximum",
     "removePackageScripts": true,
+    "generateUpdatesFilesForAllChannels": true,
+    "electronUpdaterCompatibility": ">=2.15.0",
     "win": {
       "target": [
         {
@@ -118,14 +121,19 @@
       "asarUnpack": [
         "node_modules/sharp/**/*",
         "node_modules/better-sqlite3/**/*"
-      ]
+      ],
+      "fileAssociations": [],
+      "protocols": []
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Velocity Launcher"
+      "shortcutName": "Velocity Launcher",
+      "allowElevation": false,
+      "perMachine": false,
+      "differentialPackage": true
     },
     "portable": {
       "artifactName": "${name}-${version}-portable.${ext}"
