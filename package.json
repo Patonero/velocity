@@ -129,9 +129,8 @@
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
       "installerLanguages": [
-        "English"
-      ],
-      "language": "English"
+        "en_US"
+      ]
     },
     "portable": {
       "artifactName": "${name}-${version}-portable.${ext}"
