@@ -81,6 +81,8 @@ interface LauncherSettings {
     | "launchCount"
     | "emulatorType";
   showDescriptions: boolean;
+  autoUpdateCheck: boolean;
+  launchTracking: boolean;
 }
 
 interface ElectronAPI {
@@ -367,6 +369,18 @@ class VelocityLauncher {
     manualUpdateBtn?.addEventListener("click", () =>
       this.checkForUpdatesManually()
     );
+
+    // Auto-update checkbox
+    autoUpdateCheck?.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement;
+      this.updateAutoUpdateSetting(target.checked);
+    });
+
+    // Launch tracking checkbox
+    launchTrackingCheck?.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement;
+      this.updateLaunchTrackingSetting(target.checked);
+    });
 
     // About section links
     const githubLink = document.getElementById("github-link");
@@ -872,14 +886,21 @@ class VelocityLauncher {
   private async handleConfirmYes(): Promise<void> {
     if (!this.currentEditingId) return;
 
-    try {
-      await (window as any).electronAPI.removeEmulator(this.currentEditingId);
-      await this.loadSettings();
-      this.renderEmulators();
+    if (this.currentEditingId === 'reset-settings') {
+      // Handle settings reset
+      await this.executeSettingsReset();
       this.hideConfirmationModal();
-    } catch (error) {
-      console.error("Error deleting emulator:", error);
-      alert("Failed to delete emulator. Please try again.");
+    } else {
+      // Handle emulator deletion
+      try {
+        await (window as any).electronAPI.removeEmulator(this.currentEditingId);
+        await this.loadSettings();
+        this.renderEmulators();
+        this.hideConfirmationModal();
+      } catch (error) {
+        console.error("Error deleting emulator:", error);
+        this.showNotification("Failed to delete emulator. Please try again.", "error");
+      }
     }
   }
 
@@ -1236,6 +1257,22 @@ class VelocityLauncher {
     if (defaultViewSelect && this.settings) {
       defaultViewSelect.value = this.settings.viewMode || "grid";
     }
+
+    // Initialize auto-update checkbox
+    const autoUpdateCheck = document.getElementById(
+      "auto-update-check"
+    ) as HTMLInputElement;
+    if (autoUpdateCheck && this.settings) {
+      autoUpdateCheck.checked = this.settings.autoUpdateCheck !== false; // Default to true
+    }
+
+    // Initialize launch tracking checkbox
+    const launchTrackingCheck = document.getElementById(
+      "launch-tracking"
+    ) as HTMLInputElement;
+    if (launchTrackingCheck && this.settings) {
+      launchTrackingCheck.checked = this.settings.launchTracking !== false; // Default to true
+    }
   }
 
   private async loadCurrentVersionInSettings(): Promise<void> {
@@ -1289,17 +1326,21 @@ class VelocityLauncher {
       console.error("Error checking for updates:", error);
       manualUpdateBtn.disabled = false;
       manualUpdateBtn.textContent = originalText;
-      alert("Failed to check for updates. Please try again later.");
+      this.showNotification("Failed to check for updates. Please try again later.", "error");
     }
   }
 
   private async resetSettingsToDefaults(): Promise<void> {
-    const confirmResult = confirm(
-      "Are you sure you want to reset all settings to their default values? This action cannot be undone."
+    this.currentEditingId = 'reset-settings'; // Use a special ID for settings reset
+    this.showConfirmationModal(
+      "Reset Settings",
+      "Are you sure you want to reset all settings to their default values? This action cannot be undone.",
+      "Reset Settings",
+      "Cancel"
     );
+  }
 
-    if (!confirmResult) return;
-
+  private async executeSettingsReset(): Promise<void> {
     try {
       // Reset settings to defaults (keep emulators)
       if (this.settings) {
@@ -1308,6 +1349,8 @@ class VelocityLauncher {
         this.settings.sortBy = "name";
         this.settings.showDescriptions = true;
         this.settings.gridSize = "medium";
+        this.settings.autoUpdateCheck = true;
+        this.settings.launchTracking = true;
 
         await this.saveSettings();
 
@@ -1317,11 +1360,12 @@ class VelocityLauncher {
         this.initializeSortSelect();
         this.initializeSettingsContent();
 
-        alert("Settings have been reset to defaults.");
+        // Show success message using a simple notification instead of alert
+        this.showNotification("Settings have been reset to defaults.", "success");
       }
     } catch (error) {
       console.error("Error resetting settings:", error);
-      alert("Failed to reset settings. Please try again.");
+      this.showNotification("Failed to reset settings. Please try again.", "error");
     }
   }
 
@@ -1376,6 +1420,20 @@ class VelocityLauncher {
     this.settings.viewMode = viewMode;
     this.saveSettings();
     this.setViewMode(viewMode);
+  }
+
+  private updateAutoUpdateSetting(enabled: boolean): void {
+    if (!this.settings) return;
+
+    this.settings.autoUpdateCheck = enabled;
+    this.saveSettings();
+  }
+
+  private updateLaunchTrackingSetting(enabled: boolean): void {
+    if (!this.settings) return;
+
+    this.settings.launchTracking = enabled;
+    this.saveSettings();
   }
 
   private createEmulatorListItem(emulator: EmulatorConfig): HTMLElement {
@@ -1451,6 +1509,29 @@ class VelocityLauncher {
     } catch (error) {
       console.error("Failed to open external link:", error);
     }
+  }
+
+  private showNotification(message: string, type: "success" | "error" | "info" = "info"): void {
+    // Create notification element
+    const notification = document.createElement("div");
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+
+    // Add to body
+    document.body.appendChild(notification);
+
+    // Show with animation
+    setTimeout(() => notification.classList.add("show"), 100);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      notification.classList.remove("show");
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
   }
 }
 

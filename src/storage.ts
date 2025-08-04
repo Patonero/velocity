@@ -63,9 +63,12 @@ export class StorageService {
   private readonly defaultSettings: LauncherSettings = {
     emulators: [],
     theme: 'auto',
+    viewMode: 'grid',
     gridSize: 'medium',
     sortBy: 'name',
-    showDescriptions: true
+    showDescriptions: true,
+    autoUpdateCheck: true,
+    launchTracking: true
   };
 
   constructor() {

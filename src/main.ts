@@ -264,10 +264,13 @@ function createMainWindow(): void {
     }
     mainWindow?.show();
     
-    // Start background update check for next startup
+    // Start background update check for next startup if enabled
     if (process.env.NODE_ENV !== "development") {
       setTimeout(() => {
-        updateService?.backgroundUpdateCheck();
+        const settings = storageService.loadSettings();
+        if (settings.autoUpdateCheck !== false) { // Default to true if not set
+          updateService?.backgroundUpdateCheck();
+        }
       }, 2000); // Wait 2 seconds after main window shows
     }
   });

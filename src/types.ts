@@ -16,9 +16,12 @@ export interface EmulatorConfig {
 export interface LauncherSettings {
   emulators: EmulatorConfig[];
   theme: 'light' | 'dark' | 'auto';
+  viewMode: 'grid' | 'list';
   gridSize: 'small' | 'medium' | 'large';
   sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount' | 'emulatorType';
   showDescriptions: boolean;
+  autoUpdateCheck: boolean;
+  launchTracking: boolean;
 }
 
 export interface EmulatorFormData {

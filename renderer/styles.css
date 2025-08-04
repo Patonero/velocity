@@ -1793,3 +1793,40 @@ body {
         width: 100%;
     }
 }
+
+/* Notification System */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification-success {
+    background: linear-gradient(135deg, #4caf50, #43a047);
+    border-left: 4px solid #2e7d32;
+}
+
+.notification-error {
+    background: linear-gradient(135deg, #f44336, #e53935);
+    border-left: 4px solid #c62828;
+}
+
+.notification-info {
+    background: linear-gradient(135deg, #2196f3, #1e88e5);
+    border-left: 4px solid #1565c0;
+}
