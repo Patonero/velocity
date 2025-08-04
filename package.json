@@ -103,26 +103,13 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "icon": "assets/icon.png",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${name}-${version}-${arch}.${ext}",
       "asar": {
-        "smartUnpack": true,
-        "ordering": "entropy"
+        "smartUnpack": true
       },
       "asarUnpack": [
         "node_modules/sharp/**/*",

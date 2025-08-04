@@ -32,6 +32,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Cache Electron Builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            electron-builder-${{ runner.os }}-
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -44,21 +54,11 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
-      - name: Install Electron Builder
-        run: npm install -g electron-builder
-
-      - name: Check for application icon
-        run: |
-          if (!(Test-Path "assets\icon.png")) {
-            Write-Host "Warning: No application icon found at assets\icon.png"
-            Write-Host "A default icon will be used. Add your icon to assets\icon.png for branding."
-          } else {
-            Write-Host "Application icon found at assets\icon.png"
-          }
-        shell: powershell
+      - name: Install native deps
+        run: npx electron-builder install-app-deps
 
       - name: Package Electron app
-        run: electron-builder --win --publish always
+        run: npx electron-builder --win nsis --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
