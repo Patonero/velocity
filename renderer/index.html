@@ -29,22 +29,35 @@
             </div>
             <div class="header-actions">
                 <div id="sort-controls" class="sort-controls hidden">
-                    <label for="sort-select" class="sort-label">Sort by:</label>
-                    <select id="sort-select" class="sort-select">
-                        <option value="name">Name</option>
-                        <option value="dateAdded">Date Added</option>
-                        <option value="lastLaunched">Last Used</option>
-                        <option value="launchCount">Launch Count</option>
-                        <option value="emulatorType">System Type</option>
-                    </select>
+                    <div class="view-controls">
+                        <button id="grid-view-btn" class="btn btn-secondary btn-icon-only view-btn active" title="Grid View">
+                            <span class="btn-icon">⊞</span>
+                        </button>
+                        <button id="list-view-btn" class="btn btn-secondary btn-icon-only view-btn" title="List View">
+                            <span class="btn-icon">☰</span>
+                        </button>
+                    </div>
+                    <div class="sort-section">
+                        <label for="sort-select" class="sort-label">Sort by:</label>
+                        <select id="sort-select" class="sort-select">
+                            <option value="name">Name</option>
+                            <option value="dateAdded">Date Added</option>
+                            <option value="lastLaunched">Last Used</option>
+                            <option value="launchCount">Launch Count</option>
+                            <option value="emulatorType">System Type</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="theme-controls">
                     <button id="update-btn" class="btn btn-secondary update-btn hidden" title="Update available">
                         <span class="btn-icon">⬇</span>
                         <span id="update-text">Update</span>
                     </button>
-                    <button id="theme-toggle" class="btn btn-secondary theme-toggle" title="Toggle theme">
-                        <span id="theme-icon" class="theme-icon">🌙</span>
+                    <button id="settings-btn" class="btn btn-secondary btn-icon-only settings-btn" title="Settings">
+                        <span class="btn-icon">⚙️</span>
+                    </button>
+                    <button id="theme-toggle" class="btn btn-secondary btn-icon-only theme-toggle" title="Toggle theme">
+                        <span id="theme-icon" class="btn-icon">🌙</span>
                     </button>
                 </div>
                 <button id="add-emulator-btn" class="btn btn-primary">
@@ -93,6 +106,20 @@
 
             <div id="emulator-grid" class="emulator-grid hidden">
                 <!-- Emulator cards will be dynamically generated here -->
+            </div>
+            
+            <div id="emulator-list" class="emulator-list-view hidden">
+                <div class="list-header">
+                    <div class="list-col-icon"></div>
+                    <div class="list-col-name">Name</div>
+                    <div class="list-col-type">System</div>
+                    <div class="list-col-stats">Stats</div>
+                    <div class="list-col-last">Last Used</div>
+                    <div class="list-col-actions">Actions</div>
+                </div>
+                <div id="emulator-list-items" class="list-items">
+                    <!-- Emulator list items will be dynamically generated here -->
+                </div>
             </div>
         </main>
     </div>
@@ -297,6 +324,169 @@
                 <button id="update-later-btn" class="btn btn-secondary">Later</button>
                 <button id="update-download-btn" class="btn btn-primary">Download Update</button>
                 <button id="update-install-btn" class="btn btn-success hidden">Install & Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content settings-modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="settings-close-btn" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="settings-body">
+                <div class="settings-nav">
+                    <button class="settings-nav-btn active" data-tab="general">
+                        <span class="nav-icon">⚙️</span>
+                        General
+                    </button>
+                    <button class="settings-nav-btn" data-tab="appearance">
+                        <span class="nav-icon">🎨</span>
+                        Appearance
+                    </button>
+                    <button class="settings-nav-btn" data-tab="about">
+                        <span class="nav-icon">ℹ️</span>
+                        About
+                    </button>
+                </div>
+                
+                <div class="settings-content">
+                    <!-- General Tab -->
+                    <div id="general-tab" class="settings-tab active">
+                        <h3>General Settings</h3>
+                        
+                        <div class="settings-section">
+                            <h4>Updates</h4>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Check for Updates</label>
+                                    <p class="setting-description">Automatically check for updates when the app starts</p>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="auto-update-check" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Current Version</label>
+                                    <p class="setting-description">Version <span id="settings-current-version">Loading...</span></p>
+                                </div>
+                                <div class="setting-control">
+                                    <button id="manual-update-check" class="btn btn-secondary btn-sm">Check Now</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Performance</h4>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Launch Tracking</label>
+                                    <p class="setting-description">Track launch count and last used date for emulators</p>
+                                </div>
+                                <div class="setting-control">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="launch-tracking" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Appearance Tab -->
+                    <div id="appearance-tab" class="settings-tab">
+                        <h3>Appearance</h3>
+                        
+                        <div class="settings-section">
+                            <h4>Theme</h4>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Color Theme</label>
+                                    <p class="setting-description">Choose your preferred appearance</p>
+                                </div>
+                                <div class="setting-control">
+                                    <select id="theme-select" class="form-input-secondary">
+                                        <option value="auto">Auto (System Default)</option>
+                                        <option value="light">Light Theme</option>
+                                        <option value="dark">Dark Theme</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h4>Layout</h4>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <label>Default View</label>
+                                    <p class="setting-description">Choose how emulators are displayed by default</p>
+                                </div>
+                                <div class="setting-control">
+                                    <select id="default-view" class="form-input-secondary">
+                                        <option value="grid">Grid View</option>
+                                        <option value="list">List View</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- About Tab -->
+                    <div id="about-tab" class="settings-tab">
+                        <h3>About Velocity Launcher</h3>
+                        
+                        <div class="about-content">
+                            <div class="app-logo">
+                                <div class="logo-icon">🚀</div>
+                                <h2>Velocity Launcher</h2>
+                                <p class="version-info">Version <span id="about-version">Loading...</span></p>
+                            </div>
+                            
+                            <div class="about-description">
+                                <p>A modern, secure emulator launcher for Windows. Organize, manage, and launch your favorite emulators with ease.</p>
+                            </div>
+                            
+                            <div class="about-features">
+                                <h4>Key Features</h4>
+                                <ul>
+                                    <li>✅ Secure executable validation and launch protection</li>
+                                    <li>🎨 Dark and light themes with system preference detection</li>
+                                    <li>📊 Launch tracking and usage statistics</li>
+                                    <li>🔄 Automatic updates with delta patching</li>
+                                    <li>🖼️ Automatic icon extraction from executables</li>
+                                    <li>📋 Multiple sorting and organization options</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="about-tech">
+                                <h4>Built With</h4>
+                                <div class="tech-stack">
+                                    <span class="tech-item">Electron</span>
+                                    <span class="tech-item">TypeScript</span>
+                                    <span class="tech-item">Node.js</span>
+                                    <span class="tech-item">HTML5</span>
+                                    <span class="tech-item">CSS3</span>
+                                </div>
+                            </div>
+                            
+                            <div class="about-links">
+                                <p class="author-info">Created by <strong>Patonero</strong></p>
+                                <p class="license-info">Licensed under MIT License</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-actions">
+                <button id="settings-reset" class="btn btn-secondary">Reset to Defaults</button>
+                <button id="settings-save" class="btn btn-primary">Close</button>
             </div>
         </div>
     </div>

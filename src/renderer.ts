@@ -72,6 +72,7 @@ interface EmulatorConfig {
 interface LauncherSettings {
   emulators: EmulatorConfig[];
   theme: 'light' | 'dark' | 'auto';
+  viewMode: 'grid' | 'list';
   gridSize: 'small' | 'medium' | 'large';
   sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount' | 'emulatorType';
   showDescriptions: boolean;
@@ -121,11 +122,13 @@ interface ElectronAPI {
 class VelocityLauncher {
   private settings: LauncherSettings | null = null;
   private emulatorGrid: HTMLElement | null = null;
+  private emulatorList: HTMLElement | null = null;
   private emptyState: HTMLElement | null = null;
   private addEmulatorModal: HTMLElement | null = null;
   private emulatorForm: HTMLFormElement | null = null;
   private confirmationModal: HTMLElement | null = null;
   private updateModal: HTMLElement | null = null;
+  private settingsModal: HTMLElement | null = null;
   private currentEditingId: string | null = null;
   private systemPrefersDark: boolean = false;
   private updateInfo: any = null;
@@ -151,6 +154,7 @@ class VelocityLauncher {
     this.setupEventListeners();
     this.initializeTheme();
     this.initializeSortSelect();
+    this.initializeViewMode();
     this.renderEmulators();
     this.setupUpdateListeners();
   }
@@ -165,6 +169,7 @@ class VelocityLauncher {
 
   private setupElements(): void {
     this.emulatorGrid = document.getElementById("emulator-grid");
+    this.emulatorList = document.getElementById("emulator-list");
     this.emptyState = document.getElementById("empty-state");
     this.addEmulatorModal = document.getElementById("add-emulator-modal");
     this.emulatorForm = document.getElementById(
@@ -172,6 +177,7 @@ class VelocityLauncher {
     ) as HTMLFormElement;
     this.confirmationModal = document.getElementById("confirmation-modal");
     this.updateModal = document.getElementById("update-modal");
+    this.settingsModal = document.getElementById("settings-modal");
   }
 
   private setupEventListeners(): void {
@@ -243,9 +249,20 @@ class VelocityLauncher {
       this.sortEmulators(target.value as LauncherSettings['sortBy']);
     });
 
+    // View controls
+    const gridViewBtn = document.getElementById("grid-view-btn");
+    const listViewBtn = document.getElementById("list-view-btn");
+    
+    gridViewBtn?.addEventListener("click", () => this.setViewMode('grid'));
+    listViewBtn?.addEventListener("click", () => this.setViewMode('list'));
+
     // Theme controls
     const themeToggle = document.getElementById("theme-toggle");
     themeToggle?.addEventListener("click", () => this.toggleTheme());
+
+    // Settings button
+    const settingsBtn = document.getElementById("settings-btn");
+    settingsBtn?.addEventListener("click", () => this.showSettingsModal());
 
     // Listen for emulator stopped events from main process
     (window as any).electronAPI.onEmulatorStopped?.((emulatorId: string) => {
@@ -272,23 +289,78 @@ class VelocityLauncher {
         this.hideUpdateModal();
       }
     });
+
+    // Settings modal event listeners
+    const settingsCloseBtn = document.getElementById("settings-close-btn");
+    const settingsResetBtn = document.getElementById("settings-reset");
+    const settingsSaveBtn = document.getElementById("settings-save");
+
+    settingsCloseBtn?.addEventListener("click", () => this.hideSettingsModal());
+    settingsResetBtn?.addEventListener("click", () => this.resetSettingsToDefaults());
+    settingsSaveBtn?.addEventListener("click", () => this.saveSettingsChanges());
+
+    // Settings tabs
+    const settingsNavBtns = document.querySelectorAll(".settings-nav-btn");
+    settingsNavBtns.forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const target = e.target as HTMLButtonElement;
+        const tabId = target.getAttribute("data-tab");
+        if (tabId) {
+          this.switchSettingsTab(tabId);
+        }
+      });
+    });
+
+    // Settings controls
+    const themeSelect = document.getElementById("theme-select") as HTMLSelectElement;
+    const defaultViewSelect = document.getElementById("default-view") as HTMLSelectElement;
+    const autoUpdateCheck = document.getElementById("auto-update-check") as HTMLInputElement;
+    const launchTrackingCheck = document.getElementById("launch-tracking") as HTMLInputElement;
+    const manualUpdateBtn = document.getElementById("manual-update-check");
+
+    themeSelect?.addEventListener("change", (e) => {
+      const target = e.target as HTMLSelectElement;
+      this.updateThemeSetting(target.value as 'light' | 'dark' | 'auto');
+    });
+
+    defaultViewSelect?.addEventListener("change", (e) => {
+      const target = e.target as HTMLSelectElement;
+      this.updateViewModeSetting(target.value as 'grid' | 'list');
+    });
+
+    manualUpdateBtn?.addEventListener("click", () => this.checkForUpdatesManually());
+
+    this.settingsModal?.addEventListener("click", (e) => {
+      if (e.target === this.settingsModal) {
+        this.hideSettingsModal();
+      }
+    });
   }
 
   private renderEmulators(): void {
-    if (!this.settings || !this.emulatorGrid || !this.emptyState) return;
+    if (!this.settings || !this.emulatorGrid || !this.emulatorList || !this.emptyState) return;
 
     const hasEmulators = this.settings.emulators.length > 0;
     const sortControls = document.getElementById("sort-controls");
 
     if (hasEmulators) {
       this.emptyState.classList.add("hidden");
-      this.emulatorGrid.classList.remove("hidden");
       sortControls?.classList.remove("hidden");
+      
+      // Clear both views
       this.emulatorGrid.innerHTML = "";
+      const listItems = document.getElementById("emulator-list-items");
+      if (listItems) listItems.innerHTML = "";
 
+      // Populate both views
       this.settings.emulators.forEach(async (emulator) => {
+        // Create grid card
         const card = this.createEmulatorCard(emulator);
         this.emulatorGrid!.appendChild(card);
+        
+        // Create list item
+        const listItem = this.createEmulatorListItem(emulator);
+        listItems?.appendChild(listItem);
         
         // Check if emulator is currently running and update button state
         try {
@@ -300,9 +372,13 @@ class VelocityLauncher {
           console.error(`Error checking running status for ${emulator.id}:`, error);
         }
       });
+
+      // Show the appropriate view based on current mode
+      this.updateViewDisplay();
     } else {
       this.emptyState.classList.remove("hidden");
       this.emulatorGrid.classList.add("hidden");
+      this.emulatorList.classList.add("hidden");
       sortControls?.classList.add("hidden");
     }
   }
@@ -408,6 +484,8 @@ class VelocityLauncher {
 
   private showAddEmulatorModal(): void {
     this.addEmulatorModal?.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    
     if (!this.currentEditingId) {
       this.emulatorForm?.reset();
       // Reset modal to "Add" mode
@@ -421,6 +499,7 @@ class VelocityLauncher {
   private hideAddEmulatorModal(): void {
     this.addEmulatorModal?.classList.add("hidden");
     this.currentEditingId = null;
+    document.body.style.overflow = "";
   }
 
   private async browseExecutable(): Promise<void> {
@@ -946,6 +1025,257 @@ class VelocityLauncher {
       console.error('Error installing update:', error);
       alert(`Failed to install update: ${error}`);
     }
+  }
+
+  // Settings Modal Methods
+  private showSettingsModal(): void {
+    if (!this.settingsModal) return;
+    
+    this.settingsModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+    
+    // Initialize settings content
+    this.initializeSettingsContent();
+  }
+
+  private hideSettingsModal(): void {
+    if (!this.settingsModal) return;
+    
+    this.settingsModal.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  private switchSettingsTab(tabId: string): void {
+    // Remove active class from all nav buttons and tabs
+    const navBtns = document.querySelectorAll('.settings-nav-btn');
+    const tabs = document.querySelectorAll('.settings-tab');
+    
+    navBtns.forEach(btn => btn.classList.remove('active'));
+    tabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Add active class to selected nav button and tab
+    const selectedNavBtn = document.querySelector(`[data-tab="${tabId}"]`);
+    const selectedTab = document.getElementById(`${tabId}-tab`);
+    
+    selectedNavBtn?.classList.add('active');
+    selectedTab?.classList.add('active');
+  }
+
+  private async initializeSettingsContent(): Promise<void> {
+    // Load current version
+    await this.loadCurrentVersionInSettings();
+    
+    // Initialize theme select
+    const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+    if (themeSelect && this.settings) {
+      themeSelect.value = this.settings.theme || 'auto';
+    }
+    
+    // Initialize default view select
+    const defaultViewSelect = document.getElementById('default-view') as HTMLSelectElement;
+    if (defaultViewSelect && this.settings) {
+      defaultViewSelect.value = this.settings.viewMode || 'grid';
+    }
+  }
+
+  private async loadCurrentVersionInSettings(): Promise<void> {
+    try {
+      const version = await (window as any).electronAPI.getVersion();
+      const settingsVersionEl = document.getElementById('settings-current-version');
+      const aboutVersionEl = document.getElementById('about-version');
+      
+      if (settingsVersionEl) {
+        settingsVersionEl.textContent = version;
+      }
+      if (aboutVersionEl) {
+        aboutVersionEl.textContent = version;
+      }
+    } catch (error) {
+      console.error('Error getting version for settings:', error);
+    }
+  }
+
+
+  private updateThemeSetting(theme: 'light' | 'dark' | 'auto'): void {
+    if (!this.settings) return;
+    
+    this.settings.theme = theme;
+    this.applyTheme(theme);
+    this.saveSettings();
+  }
+
+  private async checkForUpdatesManually(): Promise<void> {
+    const manualUpdateBtn = document.getElementById('manual-update-check') as HTMLButtonElement;
+    if (!manualUpdateBtn) return;
+    
+    // Update button state
+    const originalText = manualUpdateBtn.textContent;
+    manualUpdateBtn.disabled = true;
+    manualUpdateBtn.textContent = 'Checking...';
+    
+    try {
+      // Trigger manual update check
+      await (window as any).electronAPI.checkForUpdates();
+      
+      // Reset button after a delay
+      setTimeout(() => {
+        manualUpdateBtn.disabled = false;
+        manualUpdateBtn.textContent = originalText;
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      manualUpdateBtn.disabled = false;
+      manualUpdateBtn.textContent = originalText;
+      alert('Failed to check for updates. Please try again later.');
+    }
+  }
+
+  private async resetSettingsToDefaults(): Promise<void> {
+    const confirmResult = confirm('Are you sure you want to reset all settings to their default values? This action cannot be undone.');
+    
+    if (!confirmResult) return;
+    
+    try {
+      // Reset settings to defaults (keep emulators)
+      if (this.settings) {
+        this.settings.theme = 'auto';
+        this.settings.viewMode = 'grid';
+        this.settings.sortBy = 'name';
+        this.settings.showDescriptions = true;
+        this.settings.gridSize = 'medium';
+        
+        await this.saveSettings();
+        
+        // Reinitialize UI
+        this.initializeTheme();
+        this.initializeViewMode();
+        this.initializeSortSelect();
+        this.initializeSettingsContent();
+        
+        alert('Settings have been reset to defaults.');
+      }
+    } catch (error) {
+      console.error('Error resetting settings:', error);
+      alert('Failed to reset settings. Please try again.');
+    }
+  }
+
+  private async saveSettingsChanges(): Promise<void> {
+    // Settings are applied automatically, just close the modal
+    this.hideSettingsModal();
+  }
+
+  // View Mode Methods
+  private initializeViewMode(): void {
+    if (this.settings) {
+      this.setViewMode(this.settings.viewMode || 'grid');
+    }
+  }
+
+  private setViewMode(mode: 'grid' | 'list'): void {
+    if (!this.settings) return;
+
+    this.settings.viewMode = mode;
+    this.saveSettings();
+
+    // Update button states
+    const gridBtn = document.getElementById('grid-view-btn');
+    const listBtn = document.getElementById('list-view-btn');
+    
+    gridBtn?.classList.toggle('active', mode === 'grid');
+    listBtn?.classList.toggle('active', mode === 'list');
+
+    // Update view display
+    this.updateViewDisplay();
+  }
+
+  private updateViewDisplay(): void {
+    if (!this.settings) return;
+
+    const hasEmulators = this.settings.emulators.length > 0;
+    
+    if (hasEmulators) {
+      if (this.settings.viewMode === 'list') {
+        this.emulatorGrid?.classList.add('hidden');
+        this.emulatorList?.classList.remove('hidden');
+      } else {
+        this.emulatorGrid?.classList.remove('hidden');
+        this.emulatorList?.classList.add('hidden');
+      }
+    }
+  }
+
+  private updateViewModeSetting(viewMode: 'grid' | 'list'): void {
+    if (!this.settings) return;
+    
+    this.settings.viewMode = viewMode;
+    this.saveSettings();
+    this.setViewMode(viewMode);
+  }
+
+  private createEmulatorListItem(emulator: EmulatorConfig): HTMLElement {
+    const listItem = document.createElement('div');
+    listItem.className = 'list-item';
+    listItem.setAttribute('data-emulator-id', emulator.id);
+
+    // Security: Escape all user-provided data
+    const safeName = escapeHtml(emulator.name);
+    const safeType = escapeHtml(emulator.emulatorType);
+    const safeId = escapeHtml(emulator.id);
+    
+    // Validate icon path for security
+    const safeIconPath = emulator.iconPath && isValidFilePath(emulator.iconPath)
+      ? emulator.iconPath
+      : null;
+
+    const iconElement = safeIconPath
+      ? `<img src="file://${safeIconPath}" alt="${safeName}" onerror="this.style.display='none'; this.parentElement.innerHTML='🎮';">`
+      : `🎮`;
+
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleDateString();
+    };
+
+    listItem.innerHTML = `
+      <div class="list-item-icon">${iconElement}</div>
+      <div class="list-item-name">${safeName}</div>
+      <div class="list-item-type">${safeType}</div>
+      <div class="list-item-stats">${emulator.launchCount} launches</div>
+      <div class="list-item-last">${emulator.lastLaunched ? formatDate(emulator.lastLaunched) : 'Never'}</div>
+      <div class="list-item-actions">
+        <button class="btn btn-secondary edit-btn" title="Edit" data-emulator-id="${safeId}">
+          <span class="btn-icon">⚙️</span>
+        </button>
+        <button class="btn btn-danger delete-btn" title="Delete" data-emulator-id="${safeId}">
+          <span class="btn-icon">🗑️</span>
+        </button>
+      </div>
+    `;
+
+    // Add click to launch
+    listItem.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.list-item-actions')) {
+        this.launchEmulator(emulator);
+      }
+    });
+
+    // Add button event listeners
+    const editBtn = listItem.querySelector('.edit-btn');
+    const deleteBtn = listItem.querySelector('.delete-btn');
+
+    editBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.editEmulator(emulator.id);
+    });
+
+    deleteBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.deleteEmulator(emulator.id);
+    });
+
+    return listItem;
   }
 }
 
