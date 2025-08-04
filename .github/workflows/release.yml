@@ -98,19 +98,14 @@ jobs:
           tag_name: ${{ steps.build-tag.outputs.tag }}
           name: "${{ steps.build-tag.outputs.tag }}"
           body: |
-            ## Automated Build Release
-
             **Build Information:**
             - Version: ${{ steps.build-tag.outputs.version }}
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-            - Timestamp: ${{ steps.build-tag.outputs.tag }}
           draft: false
           prerelease: true
           files: |
             dist/velocity-${{ steps.build-tag.outputs.version }}-x64.exe
-            dist/velocity-${{ steps.build-tag.outputs.version }}-portable.exe
-            dist/velocity-${{ steps.build-tag.outputs.version }}-x64.zip
             dist/latest.yml
             dist/*.blockmap
         env:
