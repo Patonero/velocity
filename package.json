@@ -1,6 +1,6 @@
 {
   "name": "velocity",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
@@ -141,7 +141,9 @@
       "perMachine": false,
       "differentialPackage": true,
       "deleteAppDataOnUninstall": false,
-      "installerLanguages": ["en_US"],
+      "installerLanguages": [
+        "en_US"
+      ],
       "language": "en_US"
     },
     "portable": {
