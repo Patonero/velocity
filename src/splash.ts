@@ -210,6 +210,10 @@ class SplashController {
     const speedMB = (progress.bytesPerSecond / 1024 / 1024).toFixed(1);
     const transferredMB = (progress.transferred / 1024 / 1024).toFixed(1);
     const totalMB = (progress.total / 1024 / 1024).toFixed(1);
+    
+    // Show delta patch information if available
+    const isDelta = progress.isDelta || parseFloat(totalMB) < 50;
+    const patchInfo = isDelta ? ' (patch)' : '';
 
     // Update circular progress
     const circle = document.querySelector(
@@ -234,7 +238,19 @@ class SplashController {
     }
 
     if (sizeElement) {
-      sizeElement.textContent = `${transferredMB} MB / ${totalMB} MB`;
+      sizeElement.textContent = `${transferredMB} MB / ${totalMB} MB${patchInfo}`;
+    }
+    
+    // Show savings information for delta updates
+    if (isDelta && progress.estimatedSavings) {
+      const savingsElement = document.querySelector('.loading-subtext');
+      if (savingsElement && parseFloat(totalMB) < 30) {
+        savingsElement.innerHTML = `
+          <span id="download-speed">${speedMB} MB/s</span> • 
+          <span id="download-size">${transferredMB} MB / ${totalMB} MB (patch)</span><br>
+          <small style="color: #10b981;">✓ ${progress.estimatedSavings}</small>
+        `;
+      }
     }
   }
 

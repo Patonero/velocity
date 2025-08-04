@@ -58,7 +58,7 @@ jobs:
         shell: powershell
 
       - name: Package Electron app
-        run: electron-builder --win --publish never
+        run: electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

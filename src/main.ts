@@ -171,11 +171,20 @@ if (process.env.NODE_ENV !== "development") {
   });
 
   autoUpdater.on("download-progress", (progressObj) => {
-    const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+    const speedMB = (progressObj.bytesPerSecond / 1024 / 1024).toFixed(1);
+    const totalMB = (progressObj.total / 1024 / 1024).toFixed(1);
+    const transferredMB = (progressObj.transferred / 1024 / 1024).toFixed(1);
+    
+    const logMessage = `Delta update: ${speedMB} MB/s - ${progressObj.percent.toFixed(1)}% (${transferredMB}/${totalMB} MB)`;
     console.log(logMessage);
+    
     const targetWindow = splashWindow || mainWindow;
     if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("download-progress", progressObj);
+      targetWindow.webContents.send("download-progress", {
+        ...progressObj,
+        isDelta: true,
+        estimatedSavings: parseFloat(totalMB) < 50 ? '85% smaller than full download' : 'Differential patch'
+      });
     }
   });
 

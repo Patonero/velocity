@@ -14,7 +14,8 @@
     "dist": "npm run build && electron-builder",
     "dist:win": "npm run build && electron-builder --win",
     "release": "npm run build && electron-builder --publish=always",
-    "release:delta": "npm run build && electron-builder --win --publish=never --config.nsis.differentialPackage=true"
+    "release:delta": "npm run build && electron-builder --win --publish=never --config.nsis.differentialPackage=true",
+    "build:optimized": "npm run build && electron-builder --win --config.compression=maximum --config.nsis.differentialPackage=true"
   },
   "keywords": [
     "electron",
@@ -93,6 +94,8 @@
     "removePackageScripts": true,
     "generateUpdatesFilesForAllChannels": true,
     "electronUpdaterCompatibility": ">=2.15.0",
+    "buildDependenciesFromSource": false,
+    "npmRebuild": false,
     "win": {
       "target": [
         {
@@ -117,7 +120,10 @@
       "icon": "assets/icon.png",
       "requestedExecutionLevel": "asInvoker",
       "artifactName": "${name}-${version}-${arch}.${ext}",
-      "asar": true,
+      "asar": {
+        "smartUnpack": true,
+        "ordering": "entropy"
+      },
       "asarUnpack": [
         "node_modules/sharp/**/*",
         "node_modules/better-sqlite3/**/*"
@@ -133,7 +139,10 @@
       "shortcutName": "Velocity Launcher",
       "allowElevation": false,
       "perMachine": false,
-      "differentialPackage": true
+      "differentialPackage": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["en_US"],
+      "language": "en_US"
     },
     "portable": {
       "artifactName": "${name}-${version}-portable.${ext}"
