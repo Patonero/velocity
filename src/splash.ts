@@ -92,10 +92,10 @@ class SplashController {
   }
 
   private async startUpdateCheck(): Promise<void> {
-    // Show checking state
+    // Show checking state with minimal delay
     setTimeout(() => {
       this.showState("checking");
-    }, 1000);
+    }, 300);
 
     try {
       const result = await (window as any).splashAPI.checkForUpdates();
@@ -104,23 +104,33 @@ class SplashController {
         // Update available - event listener will handle this
         console.log("Update available:", result.info);
       } else {
-        // No update available or development mode - proceed to main app
+        // No update available - proceed quickly
+        const delay = result.fromCache ? 300 : 600; // Much faster if from cache
+        
+        // Update UI to show cached result
+        if (result.fromCache) {
+          const checkingText = document.querySelector('#loading-checking .loading-text');
+          if (checkingText) {
+            checkingText.textContent = 'Up to date!';
+          }
+        }
+        
         setTimeout(() => {
           this.showState("ready");
           setTimeout(() => {
             this.openMainWindow();
-          }, 1500);
-        }, 1500);
+          }, result.fromCache ? 400 : 600);
+        }, delay);
       }
     } catch (error) {
       console.error("Error checking for updates:", error);
-      // In development mode, just proceed to main app after showing the splash
+      // Quick recovery - proceed to main app
       setTimeout(() => {
         this.showState("ready");
         setTimeout(() => {
           this.openMainWindow();
-        }, 1500);
-      }, 1000);
+        }, 600);
+      }, 400);
     }
   }
 

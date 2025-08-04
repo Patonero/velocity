@@ -5,6 +5,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { StorageService } from "./storage";
 import { IconService } from "./icon-service";
+import { UpdateService } from "./update-service";
 
 // Enable hot-reload for development
 if (process.env.NODE_ENV === "development") {
@@ -120,6 +121,7 @@ let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let storageService: StorageService;
 let iconService: IconService;
+let updateService: UpdateService;
 const launchedProcesses = new Set<number>();
 const runningEmulators = new Map<string, number>(); // emulatorId -> PID
 
@@ -241,6 +243,13 @@ function createMainWindow(): void {
       splashWindow.close();
     }
     mainWindow?.show();
+    
+    // Start background update check for next startup
+    if (process.env.NODE_ENV !== "development") {
+      setTimeout(() => {
+        updateService?.backgroundUpdateCheck();
+      }, 2000); // Wait 2 seconds after main window shows
+    }
   });
 
   mainWindow.on("closed", () => {
@@ -445,8 +454,7 @@ function setupIpcHandlers(): void {
       return { available: false, message: "Updates disabled in development" };
     }
     try {
-      const result = await autoUpdater.checkForUpdates();
-      return { available: true, info: result?.updateInfo };
+      return await updateService.checkForUpdatesOptimized();
     } catch (error) {
       console.error("Error checking for updates:", error);
       return { available: false, error: (error as Error).message };
@@ -478,6 +486,14 @@ function setupIpcHandlers(): void {
     return app.getVersion();
   });
 
+  ipcMain.handle("updater:clear-cache", () => {
+    if (process.env.NODE_ENV === "development") {
+      updateService?.clearCache();
+      return { success: true };
+    }
+    return { success: false, message: "Cache clearing only available in development" };
+  });
+
   // Splash screen handlers
   ipcMain.handle("splash:open-main-window", () => {
     if (!mainWindow) {
@@ -493,6 +509,7 @@ function setupIpcHandlers(): void {
 app.whenReady().then(() => {
   storageService = new StorageService();
   iconService = new IconService();
+  updateService = new UpdateService();
   setupIpcHandlers();
 
   // Start with splash screen
