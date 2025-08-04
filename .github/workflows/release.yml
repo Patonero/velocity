@@ -10,7 +10,6 @@ on:
       - "Claude.md"
   workflow_dispatch:
 
-# Cancel in-progress runs when a new one starts
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -97,7 +96,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.build-tag.outputs.tag }}
-          name: "Build ${{ steps.build-tag.outputs.tag }}"
+          name: "v${{ steps.build-tag.outputs.tag }}"
           body: |
             ## Automated Build Release
 
@@ -108,11 +107,9 @@ jobs:
             - Timestamp: ${{ steps.build-tag.outputs.tag }}
 
             **Included Files:**
-            - Windows Installer - `Velocity.Launcher-${{ steps.build-tag.outputs.version }}-x64.exe`
-            - Portable Executable - `Velocity.Launcher-${{ steps.build-tag.outputs.version }}-portable.exe`
-            - Zip Archive - `Velocity.Launcher-${{ steps.build-tag.outputs.version }}-x64.zip`
-
-            This is an automated build from the CI/CD pipeline.
+            - Windows Installer - `velocity-${{ steps.build-tag.outputs.version }}-x64.exe`
+            - Portable Executable - `velocity-${{ steps.build-tag.outputs.version }}-portable.exe`
+            - Zip Archive - `velocity-${{ steps.build-tag.outputs.version }}-x64.zip`
 
             ### Download Instructions:
             - **For most users**: Download the Windows Installer
@@ -121,9 +118,11 @@ jobs:
           draft: false
           prerelease: true
           files: |
-            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.exe
-            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-portable.exe
-            dist/Velocity Launcher-${{ steps.build-tag.outputs.version }}-x64.zip
+            dist/velocity-${{ steps.build-tag.outputs.version }}-x64.exe
+            dist/velocity-${{ steps.build-tag.outputs.version }}-portable.exe
+            dist/velocity-${{ steps.build-tag.outputs.version }}-x64.zip
+            dist/latest.yml
+            dist/*.blockmap
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -135,4 +134,6 @@ jobs:
             dist/*.exe
             dist/*.zip
             dist/*.msi
+            dist/latest.yml
+            dist/*.blockmap
           retention-days: 30

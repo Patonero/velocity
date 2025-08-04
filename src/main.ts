@@ -10,10 +10,12 @@ import { IconService } from "./icon-service";
 if (process.env.NODE_ENV === "development") {
   try {
     const chokidar = require("chokidar");
-    
+
     // Watch renderer files (just reload the page for faster feedback)
-    const rendererWatcher = chokidar.watch(path.join(__dirname, "..", "renderer"));
-    
+    const rendererWatcher = chokidar.watch(
+      path.join(__dirname, "..", "renderer")
+    );
+
     rendererWatcher.on("change", (filePath: string) => {
       console.log(`🔄 Renderer file changed: ${path.basename(filePath)}`);
       // Delay to ensure file is fully written
@@ -23,9 +25,11 @@ if (process.env.NODE_ENV === "development") {
         });
       }, 100);
     });
-    
+
     console.log("🔥 Hot-reload enabled for development");
-    console.log("📁 Watching: dist/ (nodemon restart) & renderer/ (page reload)");
+    console.log(
+      "📁 Watching: dist/ (nodemon restart) & renderer/ (page reload)"
+    );
   } catch (error) {
     console.log("Hot-reload not available:", error);
   }
@@ -112,7 +116,8 @@ const isValidWorkingDirectory = (dirPath: string): boolean => {
   }
 };
 
-let mainWindow: BrowserWindow;
+let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
 let storageService: StorageService;
 let iconService: IconService;
 const launchedProcesses = new Set<number>();
@@ -122,50 +127,95 @@ const runningEmulators = new Map<string, number>(); // emulatorId -> PID
 if (process.env.NODE_ENV !== "development") {
   autoUpdater.logger = require("electron-log");
   (autoUpdater.logger as any).transports.file.level = "info";
-  
+
   // Auto-updater event listeners
-  autoUpdater.on('checking-for-update', () => {
-    console.log('Checking for update...');
+  autoUpdater.on("checking-for-update", () => {
+    console.log("Checking for update...");
   });
-  
-  autoUpdater.on('update-available', (info) => {
-    console.log('Update available:', info.version);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-available', info);
+
+  autoUpdater.on("update-available", (info) => {
+    console.log("Update available:", info.version);
+    const targetWindow = splashWindow || mainWindow;
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send("update-available", info);
     }
   });
-  
-  autoUpdater.on('update-not-available', (info) => {
-    console.log('Update not available');
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-not-available', info);
+
+  autoUpdater.on("update-not-available", (info) => {
+    console.log("Update not available");
+    const targetWindow = splashWindow || mainWindow;
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send("update-not-available", info);
     }
   });
-  
-  autoUpdater.on('error', (err) => {
-    console.error('Update error:', err);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-error', err.message);
+
+  autoUpdater.on("error", (err) => {
+    console.error("Update error:", err);
+    const targetWindow = splashWindow || mainWindow;
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send("update-error", err.message);
     }
   });
-  
-  autoUpdater.on('download-progress', (progressObj) => {
+
+  autoUpdater.on("download-progress", (progressObj) => {
     const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
     console.log(logMessage);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-progress', progressObj);
+    const targetWindow = splashWindow || mainWindow;
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send("download-progress", progressObj);
     }
   });
-  
-  autoUpdater.on('update-downloaded', (info) => {
-    console.log('Update downloaded:', info.version);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('update-downloaded', info);
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log("Update downloaded:", info.version);
+    const targetWindow = splashWindow || mainWindow;
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send("update-downloaded", info);
     }
   });
 }
 
-function createWindow(): void {
+function createSplashWindow(): void {
+  splashWindow = new BrowserWindow({
+    width: 500,
+    height: 700,
+    frame: false,
+    alwaysOnTop: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
+      preload: path.join(__dirname, "splash-preload.js"),
+      sandbox: false,
+    },
+    title: "Velocity Launcher",
+    show: false,
+    icon: path.join(__dirname, "../assets/icon.png"),
+    center: true,
+  });
+
+  splashWindow.loadFile(path.join(__dirname, "../renderer/splash.html"));
+
+  splashWindow.once("ready-to-show", () => {
+    splashWindow?.show();
+  });
+
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+
+  if (process.env.NODE_ENV === "development") {
+    splashWindow.webContents.openDevTools();
+  }
+}
+
+function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -186,17 +236,23 @@ function createWindow(): void {
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
 
   mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
+    // Close splash window if it exists
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
+    mainWindow?.show();
   });
 
   mainWindow.on("closed", () => {
-    mainWindow = null as any;
+    mainWindow = null;
   });
 
   // Handle app close events - don't kill child processes
   mainWindow.on("close", (event) => {
     if (launchedProcesses.size > 0) {
-      console.log(`Launcher closing with ${launchedProcesses.size} emulator(s) still running`);
+      console.log(
+        `Launcher closing with ${launchedProcesses.size} emulator(s) still running`
+      );
       console.log("Emulator processes will continue running independently");
     }
   });
@@ -234,6 +290,9 @@ function setupIpcHandlers(): void {
 
   // Dialog handlers
   ipcMain.handle("dialog:show-open-dialog", async (event, options) => {
+    if (!mainWindow) {
+      throw new Error("Main window not available");
+    }
     const result = await dialog.showOpenDialog(mainWindow, options);
     return result;
   });
@@ -246,11 +305,14 @@ function setupIpcHandlers(): void {
         // Check if emulator is already running
         if (runningEmulators.has(emulatorId)) {
           const existingPid = runningEmulators.get(emulatorId);
-          console.log(`Emulator ${emulatorId} is already running with PID ${existingPid}`);
-          return { 
-            success: false, 
-            error: "This emulator is already running. Close it first to launch again.",
-            isAlreadyRunning: true
+          console.log(
+            `Emulator ${emulatorId} is already running with PID ${existingPid}`
+          );
+          return {
+            success: false,
+            error:
+              "This emulator is already running. Close it first to launch again.",
+            isAlreadyRunning: true,
           };
         }
 
@@ -307,11 +369,13 @@ function setupIpcHandlers(): void {
           if (child.pid) {
             launchedProcesses.delete(child.pid);
             runningEmulators.delete(emulatorId);
-            console.log(`Emulator ${emulatorId} (PID: ${child.pid}) exited with code ${code}, signal ${signal}`);
-            
+            console.log(
+              `Emulator ${emulatorId} (PID: ${child.pid}) exited with code ${code}, signal ${signal}`
+            );
+
             // Notify renderer that emulator has stopped
             if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('emulator-stopped', emulatorId);
+              mainWindow.webContents.send("emulator-stopped", emulatorId);
             }
           }
         });
@@ -344,7 +408,10 @@ function setupIpcHandlers(): void {
 
   // Get all running emulators
   ipcMain.handle("process:get-running-emulators", () => {
-    const running = Array.from(runningEmulators.entries()).map(([id, pid]) => ({ id, pid }));
+    const running = Array.from(runningEmulators.entries()).map(([id, pid]) => ({
+      id,
+      pid,
+    }));
     return running;
   });
 
@@ -410,24 +477,30 @@ function setupIpcHandlers(): void {
   ipcMain.handle("updater:get-version", () => {
     return app.getVersion();
   });
+
+  // Splash screen handlers
+  ipcMain.handle("splash:open-main-window", () => {
+    if (!mainWindow) {
+      createMainWindow();
+    } else if (!mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    return true;
+  });
 }
 
 app.whenReady().then(() => {
   storageService = new StorageService();
   iconService = new IconService();
   setupIpcHandlers();
-  createWindow();
 
-  // Check for updates after window is created (only in production)
-  if (process.env.NODE_ENV !== "development") {
-    setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
-    }, 3000); // Wait 3 seconds after startup
-  }
+  // Start with splash screen
+  createSplashWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createSplashWindow();
     }
   });
 });
@@ -435,10 +508,12 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   // Log running emulators before quit
   if (launchedProcesses.size > 0) {
-    console.log(`App quitting with ${launchedProcesses.size} emulator(s) still running`);
+    console.log(
+      `App quitting with ${launchedProcesses.size} emulator(s) still running`
+    );
     console.log("Running emulator PIDs:", Array.from(launchedProcesses));
   }
-  
+
   if (process.platform !== "darwin") {
     app.quit();
   }

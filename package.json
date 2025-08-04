@@ -1,6 +1,6 @@
 {
   "name": "velocity",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
@@ -113,7 +113,7 @@
       ],
       "icon": "assets/icon.png",
       "requestedExecutionLevel": "asInvoker",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "artifactName": "${name}-${version}-${arch}.${ext}",
       "asar": true,
       "asarUnpack": [
         "node_modules/sharp/**/*",
@@ -128,7 +128,7 @@
       "shortcutName": "Velocity Launcher"
     },
     "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}"
+      "artifactName": "${name}-${version}-portable.${ext}"
     },
     "publish": {
       "provider": "github",

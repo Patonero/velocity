@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' file: data:;
+        font-src 'self';
+        connect-src 'none';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+        frame-ancestors 'none';
+    ">
+    <title>Velocity Launcher</title>
+    <link rel="stylesheet" href="splash.css">
+</head>
+
+<body>
+    <div class="splash-container">
+        <div class="splash-content">
+            <!-- Logo/Icon -->
+            <div class="splash-logo">
+                <div class="logo-icon">🎮</div>
+                <h1 class="app-name">Velocity Launcher</h1>
+                <p class="app-tagline">Emulator Management Made Easy</p>
+            </div>
+
+            <!-- Loading States -->
+            <div class="loading-section">
+                <!-- Initial Loading -->
+                <div id="loading-initial" class="loading-state active">
+                    <div class="spinner"></div>
+                    <p class="loading-text">Starting Velocity Launcher...</p>
+                </div>
+
+                <!-- Checking for Updates -->
+                <div id="loading-checking" class="loading-state">
+                    <div class="spinner"></div>
+                    <p class="loading-text">Checking for updates...</p>
+                </div>
+
+                <!-- Update Available -->
+                <div id="loading-update-available" class="loading-state">
+                    <div class="update-icon">⬇️</div>
+                    <p class="loading-text">Update available!</p>
+                    <p class="loading-subtext" id="update-version-info">Downloading version...</p>
+                </div>
+
+                <!-- Downloading Update -->
+                <div id="loading-downloading" class="loading-state">
+                    <div class="download-progress">
+                        <div class="progress-ring">
+                            <svg class="progress-ring-svg" width="80" height="80">
+                                <circle class="progress-ring-circle-bg" cx="40" cy="40" r="36" />
+                                <circle class="progress-ring-circle" cx="40" cy="40" r="36" />
+                            </svg>
+                            <div class="progress-percentage" id="download-percentage">0%</div>
+                        </div>
+                    </div>
+                    <p class="loading-text">Downloading update...</p>
+                    <p class="loading-subtext">
+                        <span id="download-speed">0 MB/s</span> •
+                        <span id="download-size">0 MB / 0 MB</span>
+                    </p>
+                </div>
+
+                <!-- Installing Update -->
+                <div id="loading-installing" class="loading-state">
+                    <div class="install-spinner">
+                        <div class="install-icon">⚙️</div>
+                    </div>
+                    <p class="loading-text">Installing update...</p>
+                    <p class="loading-subtext">This will only take a moment</p>
+                </div>
+
+                <!-- Ready to Launch -->
+                <div id="loading-ready" class="loading-state">
+                    <div class="success-icon">✅</div>
+                    <p class="loading-text">Ready to launch!</p>
+                    <p class="loading-subtext">Opening Velocity Launcher...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="loading-error" class="loading-state">
+                    <div class="error-icon">❌</div>
+                    <p class="loading-text">Update failed</p>
+                    <p class="loading-subtext" id="error-message">An error occurred during update</p>
+                    <button id="retry-btn" class="retry-button">Retry</button>
+                    <button id="skip-btn" class="skip-button">Skip Update</button>
+                </div>
+            </div>
+
+            <!-- Version Info -->
+            <div class="version-info">
+                <span id="current-version">v1.1.0</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="../dist/splash.js"></script>
+</body>
+
+</html>
