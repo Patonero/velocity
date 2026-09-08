@@ -7,6 +7,11 @@ import * as fs from "fs";
 import { StorageService } from "./storage";
 import { IconService } from "./icon-service";
 import { UpdateService } from "./update-service";
+import {
+  isValidExecutablePath,
+  sanitizeArguments,
+  isValidWorkingDirectory,
+} from "./security-utils";
 
 // Enable hot-reload for development
 if (process.env.NODE_ENV === "development") {
@@ -36,87 +41,6 @@ if (process.env.NODE_ENV === "development") {
     console.log("Hot-reload not available:", error);
   }
 }
-
-// Security validation functions
-const isValidExecutablePath = (filePath: string): boolean => {
-  try {
-    // Check if path exists
-    if (!fs.existsSync(filePath)) {
-      return false;
-    }
-
-    // Check for valid executable extensions
-    const allowedExtensions = [".exe", ".msi", ".app"];
-    const hasValidExtension = allowedExtensions.some((ext) =>
-      filePath.toLowerCase().endsWith(ext)
-    );
-
-    // Check for path traversal attempts
-    const normalizedPath = path.normalize(filePath);
-    const hasPathTraversal = normalizedPath.includes("..");
-
-    // Check if it's actually a file (not directory)
-    const stats = fs.statSync(filePath);
-    const isFile = stats.isFile();
-
-    return hasValidExtension && !hasPathTraversal && isFile;
-  } catch (error) {
-    return false;
-  }
-};
-
-const sanitizeArguments = (args: string): string[] => {
-  if (!args || typeof args !== "string") {
-    return [];
-  }
-
-  // Split arguments and filter out potentially dangerous ones
-  return args
-    .split(" ")
-    .map((arg) => arg.trim())
-    .filter((arg) => arg.length > 0)
-    .filter((arg) => {
-      // Block shell metacharacters and dangerous patterns
-      const dangerousPatterns = [
-        /[;&|`$(){}[\]<>]/, // Shell metacharacters
-        /^-{1,2}exec/i, // Execution flags
-        /\.\.\//,
-        /\.\.\\/, // Path traversal
-        /cmd/i,
-        /powershell/i,
-        /bash/i,
-        /sh$/i, // Shell commands
-      ];
-
-      return !dangerousPatterns.some((pattern) => pattern.test(arg));
-    })
-    .slice(0, 50); // Limit number of arguments
-};
-
-const isValidWorkingDirectory = (dirPath: string): boolean => {
-  try {
-    if (!dirPath || typeof dirPath !== "string") {
-      return true; // Allow empty/undefined working directory
-    }
-
-    // Check if directory exists
-    if (!fs.existsSync(dirPath)) {
-      return false;
-    }
-
-    // Check for path traversal
-    const normalizedPath = path.normalize(dirPath);
-    if (normalizedPath.includes("..")) {
-      return false;
-    }
-
-    // Check if it's actually a directory
-    const stats = fs.statSync(dirPath);
-    return stats.isDirectory();
-  } catch (error) {
-    return false;
-  }
-};
 
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;

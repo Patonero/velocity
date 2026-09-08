@@ -4,7 +4,7 @@ import * as path from 'path';
 import { EmulatorConfig, LauncherSettings } from './types';
 
 // Security validation for storage operations
-const isValidEmulatorData = (emulator: any): boolean => {
+export const isValidEmulatorData = (emulator: any): boolean => {
   // Check required fields
   if (!emulator.name || typeof emulator.name !== 'string' || emulator.name.length > 100) {
     return false;
@@ -46,7 +46,7 @@ const isValidEmulatorData = (emulator: any): boolean => {
   return true;
 };
 
-const sanitizeString = (str: string): string => {
+export const sanitizeString = (str: string): string => {
   if (!str || typeof str !== 'string') {
     return '';
   }

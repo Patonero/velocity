@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Security validation for icon extraction
-const isValidIconPath = (filePath: string): boolean => {
+export const isValidIconPath = (filePath: string): boolean => {
   try {
     // Check if path exists
     if (!fs.existsSync(filePath)) {
@@ -31,7 +31,7 @@ const isValidIconPath = (filePath: string): boolean => {
   }
 };
 
-const isValidOutputPath = (outputPath: string): boolean => {
+export const isValidOutputPath = (outputPath: string): boolean => {
   try {
     // Validate output directory
     const outputDir = path.dirname(outputPath);
