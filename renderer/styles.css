@@ -183,6 +183,49 @@ body {
     gap: 16px;
 }
 
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-secondary);
+    border-radius: 8px;
+    padding: 0 10px;
+    width: 200px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.search-box:focus-within {
+    border-color: var(--border-focus);
+    background: var(--bg-input-focus);
+}
+
+.search-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    padding: 8px 0;
+}
+
+.search-input:focus {
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: var(--text-disabled);
+}
+
 .view-controls {
     display: flex;
     align-items: center;
@@ -509,6 +552,23 @@ body {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 20px;
+}
+
+.emulator-grid.grid-small {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.emulator-grid.grid-large {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 28px;
+}
+
+.no-results-state {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 60px 20px;
+    font-size: 0.95rem;
 }
 
 @media (max-width: 768px) {
@@ -973,8 +1033,16 @@ body {
 }
 
 .update-icon {
-    font-size: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
     margin-bottom: 16px;
+}
+
+.update-icon svg {
+    width: 40px;
+    height: 40px;
 }
 
 .update-details {
@@ -1279,12 +1347,15 @@ body {
 }
 
 .confirmation-icon {
-    font-size: 3.5rem;
-    opacity: 0.9;
-    background: var(--warning-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--warning);
+}
+
+.confirmation-icon svg {
+    width: 44px;
+    height: 44px;
 }
 
 .confirmation-body p {
@@ -1337,8 +1408,14 @@ body {
     .sort-controls {
         justify-content: space-between;
         width: 100%;
+        flex-wrap: wrap;
     }
-    
+
+    .search-box {
+        width: 100%;
+        order: -1;
+    }
+
     .sort-select {
         flex: 1;
         margin-left: 8px;
@@ -1607,8 +1684,16 @@ body {
 }
 
 .logo-icon {
-    font-size: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
     margin-bottom: 12px;
+}
+
+.logo-icon svg {
+    width: 40px;
+    height: 40px;
 }
 
 .app-logo h2 {

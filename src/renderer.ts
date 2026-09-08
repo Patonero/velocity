@@ -131,6 +131,7 @@ interface ElectronAPI {
     emulatorId: string
   ) => Promise<string | null>;
   cleanupIcons: (activeEmulatorIds: string[]) => Promise<boolean>;
+  onEmulatorStopped?: (callback: (emulatorId: string) => void) => void;
 
   // Update operations
   checkForUpdates: () => Promise<{
@@ -159,6 +160,10 @@ interface ElectronAPI {
   onUpdateDownloaded?: (callback: (info: any) => void) => void;
 }
 
+interface Window {
+  electronAPI: ElectronAPI;
+}
+
 // Initialize Velocity Launcher
 
 class VelocityLauncher {
@@ -174,6 +179,7 @@ class VelocityLauncher {
   private currentEditingId: string | null = null;
   private systemPrefersDark: boolean = false;
   private updateInfo: any = null;
+  private searchQuery: string = "";
 
   constructor() {
     this.init();
@@ -203,7 +209,7 @@ class VelocityLauncher {
 
   private async loadSettings(): Promise<void> {
     try {
-      this.settings = await (window as any).electronAPI.loadSettings();
+      this.settings = await window.electronAPI.loadSettings();
     } catch (error) {
       console.error("Error loading settings:", error);
     }
@@ -292,6 +298,14 @@ class VelocityLauncher {
       this.sortEmulators(target.value as LauncherSettings["sortBy"]);
     });
 
+    // Search
+    const searchInput = document.getElementById("search-input");
+    searchInput?.addEventListener("input", (e) => {
+      const target = e.target as HTMLInputElement;
+      this.searchQuery = target.value;
+      this.renderEmulators();
+    });
+
     // View controls
     const gridViewBtn = document.getElementById("grid-view-btn");
     const listViewBtn = document.getElementById("list-view-btn");
@@ -308,7 +322,7 @@ class VelocityLauncher {
     settingsBtn?.addEventListener("click", () => this.showSettingsModal());
 
     // Listen for emulator stopped events from main process
-    (window as any).electronAPI.onEmulatorStopped?.((emulatorId: string) => {
+    window.electronAPI.onEmulatorStopped?.((emulatorId: string) => {
       this.setEmulatorButtonState(emulatorId, "stopped");
     });
 
@@ -365,6 +379,12 @@ class VelocityLauncher {
     const defaultViewSelect = document.getElementById(
       "default-view"
     ) as HTMLSelectElement;
+    const gridSizeSelect = document.getElementById(
+      "grid-size-select"
+    ) as HTMLSelectElement;
+    const showDescriptionsToggle = document.getElementById(
+      "show-descriptions-toggle"
+    ) as HTMLInputElement;
     const autoUpdateCheck = document.getElementById(
       "auto-update-check"
     ) as HTMLInputElement;
@@ -381,6 +401,16 @@ class VelocityLauncher {
     defaultViewSelect?.addEventListener("change", (e) => {
       const target = e.target as HTMLSelectElement;
       this.updateViewModeSetting(target.value as "grid" | "list");
+    });
+
+    gridSizeSelect?.addEventListener("change", (e) => {
+      const target = e.target as HTMLSelectElement;
+      this.updateGridSizeSetting(target.value as "small" | "medium" | "large");
+    });
+
+    showDescriptionsToggle?.addEventListener("change", (e) => {
+      const target = e.target as HTMLInputElement;
+      this.updateShowDescriptionsSetting(target.checked);
     });
 
     manualUpdateBtn?.addEventListener("click", () =>
@@ -431,6 +461,18 @@ class VelocityLauncher {
 
     const hasEmulators = this.settings.emulators.length > 0;
     const sortControls = document.getElementById("sort-controls");
+    const noResultsState = document.getElementById("no-results-state");
+
+    const query = this.searchQuery.trim().toLowerCase();
+    const visibleEmulators = query
+      ? this.settings.emulators.filter(
+          (emulator) =>
+            emulator.name.toLowerCase().includes(query) ||
+            emulator.emulatorType.toLowerCase().includes(query)
+        )
+      : this.settings.emulators;
+
+    this.applyGridSize();
 
     if (hasEmulators) {
       this.emptyState.classList.add("hidden");
@@ -441,8 +483,17 @@ class VelocityLauncher {
       const listItems = document.getElementById("emulator-list-items");
       if (listItems) listItems.innerHTML = "";
 
+      if (visibleEmulators.length === 0) {
+        noResultsState?.classList.remove("hidden");
+        this.emulatorGrid.classList.add("hidden");
+        this.emulatorList.classList.add("hidden");
+        return;
+      }
+
+      noResultsState?.classList.add("hidden");
+
       // Populate both views
-      this.settings.emulators.forEach(async (emulator) => {
+      visibleEmulators.forEach(async (emulator) => {
         // Create grid card
         const card = this.createEmulatorCard(emulator);
         this.emulatorGrid!.appendChild(card);
@@ -453,9 +504,9 @@ class VelocityLauncher {
 
         // Check if emulator is currently running and update button state
         try {
-          const runningStatus = await (
-            window as any
-          ).electronAPI.isEmulatorRunning(emulator.id);
+          const runningStatus = await window.electronAPI.isEmulatorRunning(
+            emulator.id
+          );
           if (runningStatus.isRunning) {
             this.setEmulatorButtonState(emulator.id, "running");
           }
@@ -474,6 +525,7 @@ class VelocityLauncher {
       this.emulatorGrid.classList.add("hidden");
       this.emulatorList.classList.add("hidden");
       sortControls?.classList.add("hidden");
+      noResultsState?.classList.add("hidden");
     }
   }
 
@@ -489,9 +541,11 @@ class VelocityLauncher {
     // Security: Validate and escape all user-provided data
     const safeName = escapeHtml(emulator.name);
     const safeType = escapeHtml(emulator.emulatorType);
-    const safeDescription = emulator.description
-      ? escapeHtml(emulator.description)
-      : "";
+    const showDescriptions = this.settings?.showDescriptions !== false;
+    const safeDescription =
+      emulator.description && showDescriptions
+        ? escapeHtml(emulator.description)
+        : "";
     const safeId = escapeHtml(emulator.id);
 
     // Validate icon path for security
@@ -602,7 +656,7 @@ class VelocityLauncher {
 
   private async browseExecutable(): Promise<void> {
     try {
-      const result = await (window as any).electronAPI.showOpenDialog({
+      const result = await window.electronAPI.showOpenDialog({
         title: "Select Emulator Executable",
         filters: [
           { name: "Executable Files", extensions: ["exe", "app"] },
@@ -626,7 +680,7 @@ class VelocityLauncher {
 
   private async browseWorkingDirectory(): Promise<void> {
     try {
-      const result = await (window as any).electronAPI.showOpenDialog({
+      const result = await window.electronAPI.showOpenDialog({
         title: "Select Working Directory",
         properties: ["openDirectory"],
       });
@@ -666,19 +720,19 @@ class VelocityLauncher {
     try {
       if (this.currentEditingId) {
         // Update existing emulator
-        const success = await (window as any).electronAPI.updateEmulator(
+        const success = await window.electronAPI.updateEmulator(
           this.currentEditingId,
           emulatorData
         );
         if (success) {
           // Extract icon if executable path changed
           if (emulatorData.executablePath) {
-            const iconPath = await (window as any).electronAPI.extractIcon(
+            const iconPath = await window.electronAPI.extractIcon(
               emulatorData.executablePath,
               this.currentEditingId
             );
             if (iconPath) {
-              await (window as any).electronAPI.updateEmulator(
+              await window.electronAPI.updateEmulator(
                 this.currentEditingId,
                 { iconPath }
               );
@@ -687,18 +741,18 @@ class VelocityLauncher {
         }
       } else {
         // Add new emulator
-        const emulatorId = await (window as any).electronAPI.addEmulator(
+        const emulatorId = await window.electronAPI.addEmulator(
           emulatorData
         );
 
         // Extract icon for the newly added emulator
         if (emulatorData.executablePath) {
-          const iconPath = await (window as any).electronAPI.extractIcon(
+          const iconPath = await window.electronAPI.extractIcon(
             emulatorData.executablePath,
             emulatorId
           );
           if (iconPath) {
-            await (window as any).electronAPI.updateEmulator(emulatorId, {
+            await window.electronAPI.updateEmulator(emulatorId, {
               iconPath,
             });
           }
@@ -726,7 +780,7 @@ class VelocityLauncher {
   private async launchEmulator(emulator: EmulatorConfig): Promise<void> {
     try {
       // Check if emulator is already running
-      const runningStatus = await (window as any).electronAPI.isEmulatorRunning(
+      const runningStatus = await window.electronAPI.isEmulatorRunning(
         emulator.id
       );
       if (runningStatus.isRunning) {
@@ -739,7 +793,7 @@ class VelocityLauncher {
       // Disable the play button while launching
       this.setEmulatorButtonState(emulator.id, "launching");
 
-      const result = await (window as any).electronAPI.launchEmulator(
+      const result = await window.electronAPI.launchEmulator(
         emulator.id,
         emulator.executablePath,
         emulator.arguments,
@@ -747,7 +801,7 @@ class VelocityLauncher {
       );
 
       if (result.success) {
-        await (window as any).electronAPI.incrementLaunchCount(emulator.id);
+        await window.electronAPI.incrementLaunchCount(emulator.id);
         await this.loadSettings();
         this.setEmulatorButtonState(emulator.id, "running");
         this.renderEmulators();
@@ -897,7 +951,7 @@ class VelocityLauncher {
     } else {
       // Handle emulator deletion
       try {
-        await (window as any).electronAPI.removeEmulator(this.currentEditingId);
+        await window.electronAPI.removeEmulator(this.currentEditingId);
         await this.loadSettings();
         this.renderEmulators();
         this.hideConfirmationModal();
@@ -938,7 +992,7 @@ class VelocityLauncher {
 
     // Update settings with new sort order
     this.settings.sortBy = sortBy;
-    (window as any).electronAPI.saveSettings(this.settings);
+    window.electronAPI.saveSettings(this.settings);
 
     this.renderEmulators();
   }
@@ -1022,7 +1076,7 @@ class VelocityLauncher {
   private async saveSettings(): Promise<void> {
     if (this.settings) {
       try {
-        await (window as any).electronAPI.saveSettings(this.settings);
+        await window.electronAPI.saveSettings(this.settings);
       } catch (error) {
         console.error("Error saving settings:", error);
       }
@@ -1031,7 +1085,7 @@ class VelocityLauncher {
 
   // Update-related methods
   private setupUpdateListeners(): void {
-    const electronAPI = (window as any).electronAPI;
+    const electronAPI = window.electronAPI;
 
     // Set up update event listeners
     electronAPI.onUpdateAvailable?.((info: any) => {
@@ -1065,7 +1119,7 @@ class VelocityLauncher {
 
   private async loadCurrentVersion(): Promise<void> {
     try {
-      const version = await (window as any).electronAPI.getVersion();
+      const version = await window.electronAPI.getVersion();
       const currentVersionElement = document.getElementById("current-version");
       if (currentVersionElement) {
         currentVersionElement.textContent = version;
@@ -1135,7 +1189,7 @@ class VelocityLauncher {
         progressContainer.classList.remove("hidden");
       }
 
-      const result = await (window as any).electronAPI.downloadUpdate();
+      const result = await window.electronAPI.downloadUpdate();
 
       if (!result.success) {
         throw new Error(result.error || result.message || "Download failed");
@@ -1195,7 +1249,7 @@ class VelocityLauncher {
 
   private async installUpdate(): Promise<void> {
     try {
-      const result = await (window as any).electronAPI.installUpdate();
+      const result = await window.electronAPI.installUpdate();
 
       if (!result.success) {
         throw new Error(result.error || result.message || "Install failed");
@@ -1262,6 +1316,22 @@ class VelocityLauncher {
       defaultViewSelect.value = this.settings.viewMode || "grid";
     }
 
+    // Initialize grid size select
+    const gridSizeSelect = document.getElementById(
+      "grid-size-select"
+    ) as HTMLSelectElement;
+    if (gridSizeSelect && this.settings) {
+      gridSizeSelect.value = this.settings.gridSize || "medium";
+    }
+
+    // Initialize show descriptions toggle
+    const showDescriptionsToggle = document.getElementById(
+      "show-descriptions-toggle"
+    ) as HTMLInputElement;
+    if (showDescriptionsToggle && this.settings) {
+      showDescriptionsToggle.checked = this.settings.showDescriptions !== false;
+    }
+
     // Initialize auto-update checkbox
     const autoUpdateCheck = document.getElementById(
       "auto-update-check"
@@ -1281,7 +1351,7 @@ class VelocityLauncher {
 
   private async loadCurrentVersionInSettings(): Promise<void> {
     try {
-      const version = await (window as any).electronAPI.getVersion();
+      const version = await window.electronAPI.getVersion();
       const settingsVersionEl = document.getElementById(
         "settings-current-version"
       );
@@ -1319,7 +1389,7 @@ class VelocityLauncher {
 
     try {
       // Trigger manual update check
-      await (window as any).electronAPI.checkForUpdates();
+      await window.electronAPI.checkForUpdates();
 
       // Reset button after a delay
       setTimeout(() => {
@@ -1426,6 +1496,33 @@ class VelocityLauncher {
     this.setViewMode(viewMode);
   }
 
+  private updateGridSizeSetting(gridSize: "small" | "medium" | "large"): void {
+    if (!this.settings) return;
+
+    this.settings.gridSize = gridSize;
+    this.saveSettings();
+    this.applyGridSize();
+  }
+
+  private applyGridSize(): void {
+    if (!this.settings || !this.emulatorGrid) return;
+
+    this.emulatorGrid.classList.remove("grid-small", "grid-large");
+    if (this.settings.gridSize === "small") {
+      this.emulatorGrid.classList.add("grid-small");
+    } else if (this.settings.gridSize === "large") {
+      this.emulatorGrid.classList.add("grid-large");
+    }
+  }
+
+  private updateShowDescriptionsSetting(enabled: boolean): void {
+    if (!this.settings) return;
+
+    this.settings.showDescriptions = enabled;
+    this.saveSettings();
+    this.renderEmulators();
+  }
+
   private updateAutoUpdateSetting(enabled: boolean): void {
     if (!this.settings) return;
 
@@ -1509,7 +1606,7 @@ class VelocityLauncher {
 
   private async openExternalLink(url: string): Promise<void> {
     try {
-      await (window as any).electronAPI.openExternal(url);
+      await window.electronAPI.openExternal(url);
     } catch (error) {
       console.error("Failed to open external link:", error);
     }
