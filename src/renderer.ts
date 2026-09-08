@@ -180,6 +180,9 @@ class VelocityLauncher {
   private systemPrefersDark: boolean = false;
   private updateInfo: any = null;
   private searchQuery: string = "";
+  private typeOptions: Array<{ group: string; value: string; label: string }> =
+    [];
+  private typeActiveIndex: number = -1;
 
   constructor() {
     this.init();
@@ -200,6 +203,7 @@ class VelocityLauncher {
     await this.loadSettings();
     this.setupElements();
     this.setupEventListeners();
+    this.initializeTypeCombobox();
     this.initializeTheme();
     this.initializeSortSelect();
     this.initializeViewMode();
@@ -606,17 +610,17 @@ class VelocityLauncher {
           </div>
         </div>
         <div class="emulator-actions">
-          <button class="action-btn edit-btn" title="Edit configuration" data-emulator-id="${safeId}">
+          <button class="action-btn edit-btn" title="Edit configuration" aria-label="Edit ${safeName}" data-emulator-id="${safeId}">
             <span class="action-icon">${ICONS.edit}</span>
           </button>
-          <button class="action-btn delete-btn" title="Remove emulator" data-emulator-id="${safeId}">
+          <button class="action-btn delete-btn" title="Remove emulator" aria-label="Delete ${safeName}" data-emulator-id="${safeId}">
             <span class="action-icon">${ICONS.delete}</span>
           </button>
         </div>
       </div>
       <div class="emulator-launch-area">
         <div class="emulator-stats">${statsLine}</div>
-        <button class="play-button" title="Launch ${safeName}">
+        <button class="play-button" title="Launch ${safeName}" aria-label="Launch ${safeName}">
           <span class="play-icon">${ICONS.play}</span>
         </button>
       </div>
@@ -654,8 +658,56 @@ class VelocityLauncher {
     return card;
   }
 
+  // Keyboard focus management for modals: traps Tab/Shift+Tab inside the
+  // topmost open modal and restores focus to whatever triggered it on
+  // close. A stack (not a single slot) because the confirmation modal can
+  // open on top of the settings modal (the "reset settings" flow).
+  private focusTrapStack: Array<() => void> = [];
+
+  private getFocusableElements(container: HTMLElement): HTMLElement[] {
+    return Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((el) => el.offsetParent !== null);
+  }
+
+  private trapFocus(modal: HTMLElement, defaultFocusEl?: HTMLElement | null): void {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = this.getFocusableElements(modal);
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    modal.addEventListener("keydown", handleKeydown);
+    (defaultFocusEl ?? this.getFocusableElements(modal)[0])?.focus();
+
+    this.focusTrapStack.push(() => {
+      modal.removeEventListener("keydown", handleKeydown);
+      previouslyFocused?.focus();
+    });
+  }
+
+  private releaseFocusTrap(): void {
+    this.focusTrapStack.pop()?.();
+  }
+
   private showAddEmulatorModal(): void {
-    this.addEmulatorModal?.classList.remove("hidden");
+    if (!this.addEmulatorModal) return;
+    this.addEmulatorModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
     if (!this.currentEditingId) {
@@ -670,13 +722,217 @@ class VelocityLauncher {
       if (modalTitle) modalTitle.textContent = "Add New Emulator";
       if (submitBtn)
         submitBtn.innerHTML = '<span class="btn-icon">✓</span>Add Emulator';
+
+      if (this.typeOptions.length > 0) {
+        this.selectTypeOption(
+          this.typeOptions[0].value,
+          this.typeOptions[0].label
+        );
+      }
     }
+
+    const nameInput = document.getElementById(
+      "emulator-name"
+    ) as HTMLElement | null;
+    this.trapFocus(this.addEmulatorModal, nameInput);
   }
 
   private hideAddEmulatorModal(): void {
     this.addEmulatorModal?.classList.add("hidden");
     this.currentEditingId = null;
     document.body.style.overflow = "";
+    this.releaseFocusTrap();
+  }
+
+  // System Type combobox: a searchable stand-in for the ~50-option <select>
+  // (still in the DOM as #emulator-type-source, hidden, used only as this
+  // combobox's data source so the option list has one place to live).
+  private initializeTypeCombobox(): void {
+    const source = document.getElementById(
+      "emulator-type-source"
+    ) as HTMLSelectElement | null;
+    const searchInput = document.getElementById(
+      "emulator-type-search"
+    ) as HTMLInputElement | null;
+    const hiddenInput = document.getElementById(
+      "emulator-type"
+    ) as HTMLInputElement | null;
+    const listbox = document.getElementById("emulator-type-listbox");
+    const combobox = document.getElementById("emulator-type-combobox");
+    if (!source || !searchInput || !hiddenInput || !listbox || !combobox)
+      return;
+
+    Array.from(source.children).forEach((child) => {
+      if (!(child instanceof HTMLOptGroupElement)) return;
+      Array.from(child.children).forEach((opt) => {
+        if (opt instanceof HTMLOptionElement) {
+          this.typeOptions.push({
+            group: child.label,
+            value: opt.value,
+            label: opt.textContent?.trim() || opt.value,
+          });
+        }
+      });
+    });
+
+    searchInput.addEventListener("input", () => {
+      this.renderTypeOptions(searchInput.value);
+      this.openTypeListbox();
+    });
+
+    searchInput.addEventListener("focus", () => {
+      this.renderTypeOptions(searchInput.value);
+      this.openTypeListbox();
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      const options = Array.from(
+        listbox.querySelectorAll<HTMLElement>(".combobox-option")
+      );
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (options.length === 0) return;
+        this.typeActiveIndex = (this.typeActiveIndex + 1) % options.length;
+        this.highlightTypeOption(options);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (options.length === 0) return;
+        this.typeActiveIndex =
+          (this.typeActiveIndex - 1 + options.length) % options.length;
+        this.highlightTypeOption(options);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const target = options[this.typeActiveIndex] ?? options[0];
+        if (target?.dataset.value !== undefined) {
+          this.selectTypeOption(
+            target.dataset.value,
+            target.dataset.label || target.dataset.value
+          );
+          this.closeTypeListbox();
+        }
+      } else if (e.key === "Escape") {
+        this.revertTypeInput();
+        this.closeTypeListbox();
+      }
+    });
+
+    searchInput.addEventListener("blur", () => {
+      // Deferred: a mousedown-selection on an option runs first (it calls
+      // preventDefault so the input never actually loses focus for a
+      // click), so this only fires for a genuine focus-away.
+      setTimeout(() => {
+        this.revertTypeInput();
+        this.closeTypeListbox();
+      }, 0);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!combobox.contains(e.target as Node)) {
+        this.closeTypeListbox();
+      }
+    });
+  }
+
+  private renderTypeOptions(filter: string): void {
+    const listbox = document.getElementById("emulator-type-listbox");
+    const hiddenInput = document.getElementById(
+      "emulator-type"
+    ) as HTMLInputElement | null;
+    if (!listbox) return;
+
+    const query = filter.trim().toLowerCase();
+    const matches = query
+      ? this.typeOptions.filter((opt) =>
+          opt.label.toLowerCase().includes(query)
+        )
+      : this.typeOptions;
+
+    this.typeActiveIndex = -1;
+
+    if (matches.length === 0) {
+      listbox.innerHTML = `<li class="combobox-empty">No matching system type</li>`;
+      return;
+    }
+
+    const selectedValue = hiddenInput?.value;
+    let html = "";
+    let currentGroup = "";
+    matches.forEach((opt) => {
+      if (opt.group !== currentGroup) {
+        currentGroup = opt.group;
+        html += `<li class="combobox-group-label">${escapeHtml(currentGroup)}</li>`;
+      }
+      const selectedClass = opt.value === selectedValue ? " selected" : "";
+      html += `<li class="combobox-option${selectedClass}" role="option" data-value="${escapeHtml(
+        opt.value
+      )}" data-label="${escapeHtml(opt.label)}">${escapeHtml(opt.label)}</li>`;
+    });
+    listbox.innerHTML = html;
+
+    listbox
+      .querySelectorAll<HTMLElement>(".combobox-option")
+      .forEach((el) => {
+        el.addEventListener("mousedown", (e) => {
+          e.preventDefault(); // keep focus in the input so blur doesn't fire first
+          if (el.dataset.value !== undefined) {
+            this.selectTypeOption(
+              el.dataset.value,
+              el.dataset.label || el.dataset.value
+            );
+          }
+          this.closeTypeListbox();
+        });
+      });
+  }
+
+  private highlightTypeOption(options: HTMLElement[]): void {
+    options.forEach((el, i) =>
+      el.classList.toggle("active", i === this.typeActiveIndex)
+    );
+    options[this.typeActiveIndex]?.scrollIntoView({ block: "nearest" });
+  }
+
+  private selectTypeOption(value: string, label: string): void {
+    const hiddenInput = document.getElementById(
+      "emulator-type"
+    ) as HTMLInputElement | null;
+    const searchInput = document.getElementById(
+      "emulator-type-search"
+    ) as HTMLInputElement | null;
+    if (hiddenInput) hiddenInput.value = value;
+    if (searchInput) searchInput.value = label;
+  }
+
+  private setTypeComboboxValue(value: string): void {
+    const match = this.typeOptions.find((opt) => opt.value === value);
+    this.selectTypeOption(value, match?.label ?? value);
+  }
+
+  private revertTypeInput(): void {
+    const hiddenInput = document.getElementById(
+      "emulator-type"
+    ) as HTMLInputElement | null;
+    const searchInput = document.getElementById(
+      "emulator-type-search"
+    ) as HTMLInputElement | null;
+    if (!hiddenInput || !searchInput) return;
+    const match = this.typeOptions.find((opt) => opt.value === hiddenInput.value);
+    searchInput.value = match?.label ?? "";
+  }
+
+  private openTypeListbox(): void {
+    document.getElementById("emulator-type-listbox")?.classList.remove("hidden");
+    document
+      .getElementById("emulator-type-search")
+      ?.setAttribute("aria-expanded", "true");
+  }
+
+  private closeTypeListbox(): void {
+    document.getElementById("emulator-type-listbox")?.classList.add("hidden");
+    document
+      .getElementById("emulator-type-search")
+      ?.setAttribute("aria-expanded", "false");
   }
 
   private async browseExecutable(): Promise<void> {
@@ -905,9 +1161,6 @@ class VelocityLauncher {
     const nameInput = document.getElementById(
       "emulator-name"
     ) as HTMLInputElement;
-    const typeSelect = document.getElementById(
-      "emulator-type"
-    ) as HTMLSelectElement;
     const descInput = document.getElementById(
       "emulator-description"
     ) as HTMLInputElement;
@@ -922,7 +1175,7 @@ class VelocityLauncher {
     ) as HTMLInputElement;
 
     if (nameInput) nameInput.value = emulator.name;
-    if (typeSelect) typeSelect.value = emulator.emulatorType;
+    this.setTypeComboboxValue(emulator.emulatorType);
     if (descInput) descInput.value = emulator.description || "";
     if (pathInput) pathInput.value = emulator.executablePath;
     if (argsInput) argsInput.value = emulator.arguments || "";
@@ -967,12 +1220,17 @@ class VelocityLauncher {
     if (confirmBtn) confirmBtn.textContent = confirmText;
     if (cancelBtn) cancelBtn.textContent = cancelText;
 
-    this.confirmationModal?.classList.remove("hidden");
+    if (!this.confirmationModal) return;
+    this.confirmationModal.classList.remove("hidden");
+    // Default focus to Cancel, not the destructive action, on a
+    // confirmation prompt.
+    this.trapFocus(this.confirmationModal, cancelBtn as HTMLElement | null);
   }
 
   private hideConfirmationModal(): void {
     this.confirmationModal?.classList.add("hidden");
     this.currentEditingId = null;
+    this.releaseFocusTrap();
   }
 
   private async handleConfirmYes(): Promise<void> {
@@ -1087,21 +1345,23 @@ class VelocityLauncher {
       const effectiveTheme =
         theme === "auto" ? (this.systemPrefersDark ? "dark" : "light") : theme;
 
+      const setLabel = (text: string) => {
+        themeIcon.parentElement?.setAttribute("title", text);
+        themeIcon.parentElement?.setAttribute("aria-label", text);
+      };
+
       switch (theme) {
         case "auto":
           themeIcon.innerHTML = ICONS.monitor;
-          themeIcon.parentElement?.setAttribute(
-            "title",
-            "Theme: Auto (follows system)"
-          );
+          setLabel("Theme: Auto (follows system)");
           break;
         case "light":
           themeIcon.innerHTML = ICONS.sun;
-          themeIcon.parentElement?.setAttribute("title", "Theme: Light");
+          setLabel("Theme: Light");
           break;
         case "dark":
           themeIcon.innerHTML = ICONS.moon;
-          themeIcon.parentElement?.setAttribute("title", "Theme: Dark");
+          setLabel("Theme: Dark");
           break;
       }
     }
@@ -1199,12 +1459,14 @@ class VelocityLauncher {
 
     this.updateModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
+    this.trapFocus(this.updateModal);
   }
 
   private hideUpdateModal(): void {
     if (!this.updateModal) return;
     this.updateModal.classList.add("hidden");
     document.body.style.overflow = "";
+    this.releaseFocusTrap();
   }
 
   private async downloadUpdate(): Promise<void> {
@@ -1305,6 +1567,7 @@ class VelocityLauncher {
 
     // Initialize settings content
     this.initializeSettingsContent();
+    this.trapFocus(this.settingsModal);
   }
 
   private hideSettingsModal(): void {
@@ -1312,6 +1575,7 @@ class VelocityLauncher {
 
     this.settingsModal.classList.add("hidden");
     document.body.style.overflow = "";
+    this.releaseFocusTrap();
   }
 
   private switchSettingsTab(tabId: string): void {
@@ -1501,6 +1765,8 @@ class VelocityLauncher {
 
     gridBtn?.classList.toggle("active", mode === "grid");
     listBtn?.classList.toggle("active", mode === "list");
+    gridBtn?.setAttribute("aria-pressed", String(mode === "grid"));
+    listBtn?.setAttribute("aria-pressed", String(mode === "list"));
 
     // Update view display
     this.updateViewDisplay();
@@ -1604,10 +1870,10 @@ class VelocityLauncher {
         emulator.lastLaunched ? formatDate(emulator.lastLaunched) : "Never"
       }</div>
       <div class="list-item-actions">
-        <button class="btn btn-secondary edit-btn" title="Edit" data-emulator-id="${safeId}">
+        <button class="btn btn-secondary edit-btn" title="Edit" aria-label="Edit ${safeName}" data-emulator-id="${safeId}">
           <span class="btn-icon">${ICONS.edit}</span>
         </button>
-        <button class="btn btn-danger delete-btn" title="Delete" data-emulator-id="${safeId}">
+        <button class="btn btn-danger delete-btn" title="Delete" aria-label="Delete ${safeName}" data-emulator-id="${safeId}">
           <span class="btn-icon">${ICONS.delete}</span>
         </button>
       </div>

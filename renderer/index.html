@@ -33,10 +33,10 @@
                         <input type="text" id="search-input" class="search-input" placeholder="Search emulators..." aria-label="Search emulators">
                     </div>
                     <div class="view-controls">
-                        <button id="grid-view-btn" class="btn btn-secondary btn-icon-only view-btn active" title="Grid View">
+                        <button id="grid-view-btn" class="btn btn-secondary btn-icon-only view-btn active" title="Grid View" aria-label="Grid view" aria-pressed="true">
                             <span class="btn-icon"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg></span>
                         </button>
-                        <button id="list-view-btn" class="btn btn-secondary btn-icon-only view-btn" title="List View">
+                        <button id="list-view-btn" class="btn btn-secondary btn-icon-only view-btn" title="List View" aria-label="List view" aria-pressed="false">
                             <span class="btn-icon"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/></svg></span>
                         </button>
                     </div>
@@ -56,10 +56,10 @@
                         <span class="btn-icon"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6 8l4 4 4-4M4 15h12"/></svg></span>
                         <span id="update-text">Update</span>
                     </button>
-                    <button id="settings-btn" class="btn btn-secondary btn-icon-only settings-btn" title="Settings">
+                    <button id="settings-btn" class="btn btn-secondary btn-icon-only settings-btn" title="Settings" aria-label="Settings">
                         <span class="btn-icon"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1L4.7 4.7"/></svg></span>
                     </button>
-                    <button id="theme-toggle" class="btn btn-secondary btn-icon-only theme-toggle" title="Toggle theme">
+                    <button id="theme-toggle" class="btn btn-secondary btn-icon-only theme-toggle" title="Toggle theme" aria-label="Toggle theme">
                         <span id="theme-icon" class="btn-icon"></span>
                     </button>
                 </div>
@@ -133,10 +133,10 @@
 
     <!-- Add Emulator Modal -->
     <div id="add-emulator-modal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="add-emulator-title">
             <div class="modal-header">
-                <h2>Add New Emulator</h2>
-                <button id="close-modal-btn" class="close-btn">&times;</button>
+                <h2 id="add-emulator-title">Add New Emulator</h2>
+                <button id="close-modal-btn" class="close-btn" aria-label="Close dialog">&times;</button>
             </div>
             <form id="emulator-form" class="emulator-form">
                 <div class="form-section">
@@ -149,8 +149,16 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="emulator-type">System Type</label>
-                        <select id="emulator-type" name="emulatorType" class="form-input-primary">
+                        <label for="emulator-type-search">System Type</label>
+                        <div class="combobox" id="emulator-type-combobox">
+                            <input type="text" id="emulator-type-search" class="form-input-primary"
+                                autocomplete="off" role="combobox" aria-expanded="false"
+                                aria-controls="emulator-type-listbox" aria-autocomplete="list"
+                                placeholder="Search system type...">
+                            <input type="hidden" id="emulator-type" name="emulatorType">
+                            <ul id="emulator-type-listbox" class="combobox-listbox hidden" role="listbox"></ul>
+                        </div>
+                        <select id="emulator-type-source" class="hidden" aria-hidden="true">
                             <!-- Multi-System Emulators -->
                             <optgroup label="Multi-System">
                                 <option value="RetroArch">RetroArch (Libretro)</option>
@@ -287,10 +295,10 @@
 
     <!-- Confirmation Modal -->
     <div id="confirmation-modal" class="modal hidden">
-        <div class="modal-content confirmation-modal-content">
+        <div class="modal-content confirmation-modal-content" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
             <div class="modal-header">
                 <h2 id="confirm-title">Confirm Action</h2>
-                <button id="confirm-close-btn" class="close-btn">&times;</button>
+                <button id="confirm-close-btn" class="close-btn" aria-label="Close dialog">&times;</button>
             </div>
             <div class="confirmation-body">
                 <div class="confirmation-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21.5 20h-19L12 3.5Z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.9" fill="currentColor" stroke="none"/></svg></div>
@@ -305,10 +313,10 @@
 
     <!-- Update Modal -->
     <div id="update-modal" class="modal hidden">
-        <div class="modal-content update-modal-content">
+        <div class="modal-content update-modal-content" role="dialog" aria-modal="true" aria-labelledby="update-title">
             <div class="modal-header">
                 <h2 id="update-title">Update Available</h2>
-                <button id="update-close-btn" class="close-btn">&times;</button>
+                <button id="update-close-btn" class="close-btn" aria-label="Close dialog">&times;</button>
             </div>
             <div class="update-body">
                 <div class="update-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7 10l5 5 5-5M5 19h14"/></svg></div>
@@ -337,10 +345,10 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal hidden">
-        <div class="modal-content settings-modal-content">
+        <div class="modal-content settings-modal-content" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="modal-header">
-                <h2>Settings</h2>
-                <button id="settings-close-btn" class="close-btn">&times;</button>
+                <h2 id="settings-title">Settings</h2>
+                <button id="settings-close-btn" class="close-btn" aria-label="Close dialog">&times;</button>
             </div>
             
             <div class="settings-body">
