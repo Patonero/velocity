@@ -268,11 +268,9 @@ class VelocityLauncher {
     );
 
     // Modal backdrop click
-    this.addEmulatorModal?.addEventListener("click", (e) => {
-      if (e.target === this.addEmulatorModal) {
-        this.hideAddEmulatorModal();
-      }
-    });
+    // Note: no backdrop-click-to-close here on purpose - this form can hold
+    // several typed fields, and a stray click shouldn't silently discard it.
+    // Use the Cancel/close button or Escape instead.
 
     // Confirmation modal event listeners
     const confirmYesBtn = document.getElementById("confirm-yes-btn");
@@ -446,6 +444,33 @@ class VelocityLauncher {
     this.settingsModal?.addEventListener("click", (e) => {
       if (e.target === this.settingsModal) {
         this.hideSettingsModal();
+      }
+    });
+
+    // Escape closes whichever modal is currently open
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+
+      if (
+        this.confirmationModal &&
+        !this.confirmationModal.classList.contains("hidden")
+      ) {
+        this.hideConfirmationModal();
+      } else if (
+        this.addEmulatorModal &&
+        !this.addEmulatorModal.classList.contains("hidden")
+      ) {
+        this.hideAddEmulatorModal();
+      } else if (
+        this.settingsModal &&
+        !this.settingsModal.classList.contains("hidden")
+      ) {
+        this.hideSettingsModal();
+      } else if (
+        this.updateModal &&
+        !this.updateModal.classList.contains("hidden")
+      ) {
+        this.hideUpdateModal();
       }
     });
   }
@@ -769,10 +794,11 @@ class VelocityLauncher {
           : "Error adding emulator:",
         error
       );
-      alert(
+      this.showNotification(
         this.currentEditingId
           ? "Failed to update emulator. Please try again."
-          : "Failed to add emulator. Please try again."
+          : "Failed to add emulator. Please try again.",
+        "error"
       );
     }
   }
@@ -784,8 +810,9 @@ class VelocityLauncher {
         emulator.id
       );
       if (runningStatus.isRunning) {
-        alert(
-          `${emulator.name} is already running (PID: ${runningStatus.pid}). Close it first to launch again.`
+        this.showNotification(
+          `${emulator.name} is already running (PID: ${runningStatus.pid}). Close it first to launch again.`,
+          "error"
         );
         return;
       }
@@ -808,17 +835,24 @@ class VelocityLauncher {
       } else {
         this.setEmulatorButtonState(emulator.id, "stopped");
         if (result.isAlreadyRunning) {
-          alert(
-            `${emulator.name} is already running. Close it first to launch again.`
+          this.showNotification(
+            `${emulator.name} is already running. Close it first to launch again.`,
+            "error"
           );
         } else {
-          alert(`Failed to launch emulator: ${result.error}`);
+          this.showNotification(
+            `Failed to launch emulator: ${result.error}`,
+            "error"
+          );
         }
       }
     } catch (error) {
       console.error("Error launching emulator:", error);
       this.setEmulatorButtonState(emulator.id, "stopped");
-      alert("Failed to launch emulator. Please check the executable path.");
+      this.showNotification(
+        "Failed to launch emulator. Please check the executable path.",
+        "error"
+      );
     }
   }
 
@@ -1101,7 +1135,7 @@ class VelocityLauncher {
 
     electronAPI.onUpdateError?.((error: string) => {
       console.error("Update error:", error);
-      alert(`Update error: ${error}`);
+      this.showNotification(`Update error: ${error}`, "error");
     });
 
     electronAPI.onDownloadProgress?.((progress: any) => {
@@ -1196,7 +1230,7 @@ class VelocityLauncher {
       }
     } catch (error) {
       console.error("Error downloading update:", error);
-      alert(`Failed to download update: ${error}`);
+      this.showNotification(`Failed to download update: ${error}`, "error");
 
       // Reset button state
       const downloadBtn = document.getElementById(
@@ -1258,7 +1292,7 @@ class VelocityLauncher {
       // The app will restart automatically after this
     } catch (error) {
       console.error("Error installing update:", error);
-      alert(`Failed to install update: ${error}`);
+      this.showNotification(`Failed to install update: ${error}`, "error");
     }
   }
 

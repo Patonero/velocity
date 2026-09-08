@@ -163,13 +163,6 @@ body {
     transition: color 0.3s ease;
 }
 
-.app-subtitle {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin: 0;
-    opacity: 0.85;
-    transition: color 0.3s ease;
-}
 
 .header-actions {
     display: flex;
@@ -1434,11 +1427,7 @@ body {
     .app-title {
         font-size: 1.5rem;
     }
-    
-    .app-subtitle {
-        font-size: 0.8rem;
-    }
-    
+
     .sort-controls {
         flex-direction: column;
         gap: 6px;
