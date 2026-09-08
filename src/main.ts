@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, ipcMain, dialog } from "electron";
 import { autoUpdater } from "electron-updater";
+import log from "electron-log/main";
 import { spawn } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
@@ -127,8 +128,8 @@ const runningEmulators = new Map<string, number>(); // emulatorId -> PID
 
 // Configure auto-updater
 if (process.env.NODE_ENV !== "development") {
-  autoUpdater.logger = require("electron-log");
-  (autoUpdater.logger as any).transports.file.level = "info";
+  autoUpdater.logger = log;
+  log.transports.file.level = "info";
   
   // Configure for silent updates
   autoUpdater.autoDownload = false; // We'll control the download timing

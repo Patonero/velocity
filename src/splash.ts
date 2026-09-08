@@ -5,6 +5,7 @@ interface SplashAPI {
     available: boolean;
     info?: any;
     error?: string;
+    fromCache?: boolean;
   }>;
   downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
   installUpdate: () => Promise<{ success: boolean; error?: string }>;
@@ -14,6 +15,10 @@ interface SplashAPI {
   onUpdateDownloaded?: (callback: (info: any) => void) => void;
   onUpdateError?: (callback: (error: string) => void) => void;
   onOpenMainWindow?: (callback: () => void) => void;
+}
+
+interface Window {
+  splashAPI: SplashAPI;
 }
 
 class SplashController {
@@ -32,7 +37,7 @@ class SplashController {
   }
 
   private async setupEventListeners(): Promise<void> {
-    const splashAPI = (window as any).splashAPI as SplashAPI;
+    const splashAPI = window.splashAPI;
 
     // Update event listeners
     splashAPI.onUpdateAvailable?.((info: any) => {
@@ -81,7 +86,7 @@ class SplashController {
 
   private async loadVersion(): Promise<void> {
     try {
-      const version = await (window as any).splashAPI.getCurrentVersion();
+      const version = await window.splashAPI.getCurrentVersion();
       const versionElement = document.getElementById("current-version");
       if (versionElement) {
         versionElement.textContent = `v${version}`;
@@ -98,7 +103,7 @@ class SplashController {
     }, 300);
 
     try {
-      const result = await (window as any).splashAPI.checkForUpdates();
+      const result = await window.splashAPI.checkForUpdates();
 
       if (result.available && result.info) {
         // Update available - event listener will handle this
@@ -138,7 +143,7 @@ class SplashController {
     this.showState("downloading");
 
     try {
-      const result = await (window as any).splashAPI.downloadUpdate();
+      const result = await window.splashAPI.downloadUpdate();
 
       if (!result.success) {
         throw new Error(result.error || "Download failed");
@@ -151,7 +156,7 @@ class SplashController {
 
   private async installUpdate(): Promise<void> {
     try {
-      const result = await (window as any).splashAPI.installUpdate();
+      const result = await window.splashAPI.installUpdate();
 
       if (!result.success) {
         throw new Error(result.error || "Installation failed");
@@ -179,7 +184,7 @@ class SplashController {
 
   private async openMainWindow(): Promise<void> {
     try {
-      await (window as any).splashAPI.openMainWindow();
+      await window.splashAPI.openMainWindow();
     } catch (error) {
       console.error("Error opening main window:", error);
     }
