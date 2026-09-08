@@ -20,7 +20,8 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 │   ├── storage.ts        # Data persistence with input validation
 │   ├── icon-service.ts   # Secure icon extraction service
 │   ├── types.ts          # TypeScript interface definitions
-│   └── tests/            # Jest test suites (planned, not yet implemented - see below)
+│   ├── security-utils.ts # Pure, unit-tested security validation (extracted from main.ts)
+│   └── tests/            # Jest test suites - see Testing Framework below
 ├── renderer/
 │   ├── index.html        # Main UI with Content Security Policy
 │   └── styles.css        # Dark theme styling
@@ -33,13 +34,14 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 ## Development Commands
 - `npm run build` - Compile TypeScript files
 - `npm run electron` - Run the application
+- `npm test` - Run Jest test suite
+- `npm run test:watch` - Run tests in watch mode
 - `npm run clean` - Clean build artifacts
-- No `npm test` script exists yet - see Testing Framework below
 
 ## Security Architecture (CRITICAL)
 
 ### Command Injection Prevention
-**Location**: `src/main.ts:82-95`
+**Location**: `src/security-utils.ts` (imported by `main.ts`)
 - All process arguments sanitized through `sanitizeArguments()` function
 - Blocks dangerous patterns: `[;&|`$(){}[]<>]`, `--exec`, `../`, `cmd`, `powershell`
 - Maximum 50 arguments limit to prevent resource exhaustion
@@ -121,19 +123,26 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 
 ## Testing Framework
 
-**Current status: no tests exist yet.** `src/tests/` is empty and there is no `npm test` script. `jest.config.js` and `tsconfig.test.json` are present as scaffolding for the intended setup below, but `jest.config.js` points at a `src/tests/setup.ts` that doesn't exist, so running Jest as configured today will fail. Restoring this suite is tracked as its own separate task - don't assume test coverage exists when reasoning about regression risk until that task lands.
+Coverage today is focused on the security-critical validation logic - the actual last line of defense before a file path is trusted, an argument reaches `spawn()`, or data is persisted. It is **not** a full suite yet: renderer DOM behavior (card rendering, sorting, view switching) has no coverage, since `renderer.ts` is loaded as a plain `<script>` with no module system, so its internal functions can't be `import`-ed into Jest without either breaking the browser bundle or fighting a heavy DOM-mocking harness. See "Coverage gaps" below before assuming something is tested.
 
-### Jest Configuration (target setup, once implemented)
-- **Test Environment**: jsdom for DOM testing capabilities
+### Jest Configuration
+- **Test Environment**: jsdom (works fine for the pure-Node/fs-based tests too - jsdom doesn't sandbox Node core modules)
 - **TypeScript Support**: ts-jest with tsconfig.test.json
 - **Coverage Reporting**: Text, LCOV, and HTML formats
 - **Test Pattern**: `src/tests/**/*.test.ts`
 
-### Test Suites Overview (target coverage, once implemented)
-- **Sorting Tests**: All sorting functionality, performance, edge cases
-- **Storage Tests**: CRUD operations, security validation, error handling
-- **Icon Service Tests**: PowerShell execution, cleanup, security
-- **Renderer Tests**: XSS prevention, path validation, DOM manipulation
+### Test Suites
+- **`security-utils.test.ts`**: `src/security-utils.ts` - the execution-domain functions extracted from `main.ts` (`isValidExecutablePath`, `sanitizeArguments`, `isValidWorkingDirectory`) plus canonical/tested twins of `renderer.ts`'s display-domain functions (`escapeHtmlForDisplay`, `isValidDisplayPath`, `sanitizeDisplayInput` - see coverage gap below)
+- **`storage.test.ts`**: `StorageService` CRUD, `isValidEmulatorData`, `sanitizeString`, corrupt-config fallback
+- **`icon-service.test.ts`**: `IconService.extractIcon`/`cleanupUnusedIcons`, `isValidIconPath`, `isValidOutputPath`, PowerShell invocation via mocked `child_process.spawn` (verifies parameterized argv, not string interpolation)
+
+Not yet covered: `main.ts`'s IPC wiring/process launching (would require mocking most of Electron), `update-service.ts`, and all of `renderer.ts`'s DOM logic (sorting, card/list rendering, search filtering).
+
+### Coverage gap worth knowing about
+`renderer.ts` keeps its own private copies of `escapeHtml`/`isValidFilePath`/`sanitizeInput` rather than importing them from `security-utils.ts`, because adding a real `export` to `renderer.ts` would make `tsc` emit CommonJS module boilerplate (`exports.foo = ...`) into `dist/renderer.js`, and that file is loaded as a plain `<script>` tag with no CommonJS runtime present - it would throw `ReferenceError: exports is not defined` and break the whole UI. The tests in `security-utils.test.ts` exercise the *same logic* via canonical copies (`escapeHtmlForDisplay`, etc.), which is useful as regression coverage of the validation patterns themselves, but they do not execute `renderer.ts`'s actual shipped code. If either copy changes, update the other by hand.
+
+### Known findings from writing these tests
+A few of the `path.normalize(...).includes('..')`-style traversal checks (in `isValidOutputPath`, and by the same pattern likely `isValidExecutablePath`/`isValidWorkingDirectory`) don't actually catch a *rooted* Windows path like `C:\Users\me\..\..\icons\file.png`, because `path.normalize` resolves the `..` segments away before the `includes('..')` check ever runs - it only normalizes to `C:\icons`. The check only bites for a relative path with no anchor to resolve against. In practice the surrounding `fs.existsSync`/extension/`isFile` checks still gate real damage, but the traversal check itself is weaker than it looks for rooted paths - see `src/tests/icon-service.test.ts`'s `isValidOutputPath` tests for a concrete example.
 
 ### Testing Best Practices
 - **Mock external dependencies** (file system, PowerShell, Electron APIs)
@@ -199,8 +208,8 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 4. **Validate PowerShell injection** protection
 
 ## Development Workflow
-1. **Write tests first** for new security-critical functionality (once the test suite is restored - see Testing Framework)
-2. **Run full test suite** before committing changes (once it exists)
+1. **Write tests first** for new security-critical functionality (see Testing Framework - `src/security-utils.ts` is where execution/path-validation logic belongs so it stays unit-testable)
+2. **Run the test suite** (`npm test`) before committing changes - note the coverage gaps documented in Testing Framework
 3. **Validate security implications** of all modifications
 4. **Update documentation** when adding new security measures
 5. **Never bypass security validation** for convenience

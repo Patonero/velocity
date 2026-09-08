@@ -5,6 +5,8 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "start": "npm run build && electron .",
     "dev": "npm run build && cross-env NODE_ENV=development electron .",
     "dev:watch": "npm run build && concurrently \"npm run build:watch\" \"nodemon --exec \\\"cross-env NODE_ENV=development electron .\\\" --watch dist --ext js\"",
