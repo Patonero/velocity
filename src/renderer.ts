@@ -11,6 +11,23 @@ const escapeHtml = (text: string): string => {
   return div.innerHTML;
 };
 
+// Static inline SVG icons (trusted, no user data interpolated)
+const ICONS = {
+  play: '<svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4.5v11l9-5.5-9-5.5Z"/></svg>',
+  edit: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 3.5a1.7 1.7 0 0 1 2.4 2.4L7 15l-3.5 1L4.5 12.5l9-9Z"/></svg>',
+  delete:
+    '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h12M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M6 5.5 6.6 16a1 1 0 0 0 1 1h4.8a1 1 0 0 0 1-1l.6-10.5"/></svg>',
+  controller:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12l1.5 5.5a2 2 0 0 1-1.93 2.5 2 2 0 0 1-1.8-1.13L15 17H9l-.77 1.87A2 2 0 0 1 6.43 20a2 2 0 0 1-1.93-2.5L6 12Z"/><path d="M6 12 7.2 6.6A3 3 0 0 1 10.13 4h3.74a3 3 0 0 1 2.93 2.6L18 12"/><line x1="9" y1="14.5" x2="9" y2="16.5"/><line x1="8" y1="15.5" x2="10" y2="15.5"/><circle cx="15" cy="14.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="17" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg>',
+  sun: '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="10" r="3.5"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1L4.7 4.7"/></svg>',
+  moon: '<svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor"><path d="M15.5 12.6A6.5 6.5 0 0 1 7.4 4.5a6.5 6.5 0 1 0 8.1 8.1Z"/></svg>',
+  monitor:
+    '<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="15" height="10" rx="1.2"/><line x1="7" y1="17" x2="13" y2="17"/><line x1="10" y1="14" x2="10" y2="17"/></svg>',
+  launching:
+    '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="10" cy="10" r="6.5" stroke-dasharray="30 10"/></svg>',
+  running: '<svg viewBox="0 0 20 20" fill="currentColor"><rect x="5.5" y="5.5" width="9" height="9" rx="1.5"/></svg>',
+};
+
 // Security: Validate and sanitize file paths
 const isValidFilePath = (path: string): boolean => {
   if (!path || typeof path !== "string") {
@@ -486,8 +503,12 @@ class VelocityLauncher {
     // Create icon element with safe data
     const iconElement = safeIconPath
       ? `<img src="file://${safeIconPath}" alt="${safeName}" class="emulator-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-         <div class="emulator-icon-fallback" style="display: none;">🎮</div>`
-      : `<div class="emulator-icon-fallback">🎮</div>`;
+         <div class="emulator-icon-fallback" style="display: none;">${ICONS.controller}</div>`
+      : `<div class="emulator-icon-fallback">${ICONS.controller}</div>`;
+
+    const statsLine = emulator.lastLaunched
+      ? `${emulator.launchCount} launches · last ${formatDate(emulator.lastLaunched)}`
+      : `${emulator.launchCount} launches`;
 
     card.innerHTML = `
       <div class="emulator-card-content">
@@ -507,34 +528,17 @@ class VelocityLauncher {
         </div>
         <div class="emulator-actions">
           <button class="action-btn edit-btn" title="Edit configuration" data-emulator-id="${safeId}">
-            <span class="action-icon">⚙️</span>
+            <span class="action-icon">${ICONS.edit}</span>
           </button>
           <button class="action-btn delete-btn" title="Remove emulator" data-emulator-id="${safeId}">
-            <span class="action-icon">🗑️</span>
+            <span class="action-icon">${ICONS.delete}</span>
           </button>
         </div>
       </div>
       <div class="emulator-launch-area">
-        <div class="emulator-stats">
-          <span class="stat-item">
-            <span class="stat-label">Launches:</span>
-            <span class="stat-value">${emulator.launchCount}</span>
-          </span>
-          ${
-            emulator.lastLaunched
-              ? `
-            <span class="stat-item">
-              <span class="stat-label">Last:</span>
-              <span class="stat-value">${formatDate(
-                emulator.lastLaunched
-              )}</span>
-            </span>
-          `
-              : ""
-          }
-        </div>
+        <div class="emulator-stats">${statsLine}</div>
         <button class="play-button" title="Launch ${safeName}">
-          <span class="play-icon">▶</span>
+          <span class="play-icon">${ICONS.play}</span>
         </button>
       </div>
     `;
@@ -784,20 +788,20 @@ class VelocityLauncher {
     switch (state) {
       case "launching":
         playButton.disabled = true;
-        playButton.innerHTML = '<span class="play-icon">⏳</span>';
+        playButton.innerHTML = `<span class="play-icon">${ICONS.launching}</span>`;
         playButton.classList.add("btn-launching");
         card.classList.add("emulator-launching");
         break;
       case "running":
         playButton.disabled = true;
-        playButton.innerHTML = '<span class="play-icon">🔴</span>';
+        playButton.innerHTML = `<span class="play-icon">${ICONS.running}</span>`;
         playButton.classList.add("btn-running");
         card.classList.add("emulator-running");
         break;
       case "stopped":
       default:
         playButton.disabled = false;
-        playButton.innerHTML = '<span class="play-icon">▶</span>';
+        playButton.innerHTML = `<span class="play-icon">${ICONS.play}</span>`;
         break;
     }
   }
@@ -997,18 +1001,18 @@ class VelocityLauncher {
 
       switch (theme) {
         case "auto":
-          themeIcon.textContent = "🖥️";
+          themeIcon.innerHTML = ICONS.monitor;
           themeIcon.parentElement?.setAttribute(
             "title",
             "Theme: Auto (follows system)"
           );
           break;
         case "light":
-          themeIcon.textContent = "☀️";
+          themeIcon.innerHTML = ICONS.sun;
           themeIcon.parentElement?.setAttribute("title", "Theme: Light");
           break;
         case "dark":
-          themeIcon.textContent = "🌙";
+          themeIcon.innerHTML = ICONS.moon;
           themeIcon.parentElement?.setAttribute("title", "Theme: Dark");
           break;
       }
@@ -1453,8 +1457,8 @@ class VelocityLauncher {
         : null;
 
     const iconElement = safeIconPath
-      ? `<img src="file://${safeIconPath}" alt="${safeName}" onerror="this.style.display='none'; this.parentElement.innerHTML='🎮';">`
-      : `🎮`;
+      ? `<img src="file://${safeIconPath}" alt="${safeName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span class="list-item-icon-fallback" style="display:none;">${ICONS.controller}</span>`
+      : `<span class="list-item-icon-fallback">${ICONS.controller}</span>`;
 
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleDateString();
@@ -1470,10 +1474,10 @@ class VelocityLauncher {
       }</div>
       <div class="list-item-actions">
         <button class="btn btn-secondary edit-btn" title="Edit" data-emulator-id="${safeId}">
-          <span class="btn-icon">⚙️</span>
+          <span class="btn-icon">${ICONS.edit}</span>
         </button>
         <button class="btn btn-danger delete-btn" title="Delete" data-emulator-id="${safeId}">
-          <span class="btn-icon">🗑️</span>
+          <span class="btn-icon">${ICONS.delete}</span>
         </button>
       </div>
     `;
