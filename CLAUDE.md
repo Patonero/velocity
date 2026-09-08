@@ -20,11 +20,7 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 │   ├── storage.ts        # Data persistence with input validation
 │   ├── icon-service.ts   # Secure icon extraction service
 │   ├── types.ts          # TypeScript interface definitions
-│   └── tests/            # Jest test suites
-│       ├── sorting-jest.test.ts
-│       ├── storage.test.ts
-│       ├── icon-service.test.ts
-│       └── renderer.test.ts
+│   └── tests/            # Jest test suites (planned, not yet implemented - see below)
 ├── renderer/
 │   ├── index.html        # Main UI with Content Security Policy
 │   └── styles.css        # Dark theme styling
@@ -37,9 +33,8 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 ## Development Commands
 - `npm run build` - Compile TypeScript files
 - `npm run electron` - Run the application
-- `npm test` - Run Jest test suite
-- `npm run test:watch` - Run tests in watch mode
 - `npm run clean` - Clean build artifacts
+- No `npm test` script exists yet - see Testing Framework below
 
 ## Security Architecture (CRITICAL)
 
@@ -126,14 +121,16 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 
 ## Testing Framework
 
-### Jest Configuration
+**Current status: no tests exist yet.** `src/tests/` is empty and there is no `npm test` script. `jest.config.js` and `tsconfig.test.json` are present as scaffolding for the intended setup below, but `jest.config.js` points at a `src/tests/setup.ts` that doesn't exist, so running Jest as configured today will fail. Restoring this suite is tracked as its own separate task - don't assume test coverage exists when reasoning about regression risk until that task lands.
+
+### Jest Configuration (target setup, once implemented)
 - **Test Environment**: jsdom for DOM testing capabilities
 - **TypeScript Support**: ts-jest with tsconfig.test.json
 - **Coverage Reporting**: Text, LCOV, and HTML formats
 - **Test Pattern**: `src/tests/**/*.test.ts`
 
-### Test Suites Overview
-- **Sorting Tests** (25 tests): All sorting functionality, performance, edge cases
+### Test Suites Overview (target coverage, once implemented)
+- **Sorting Tests**: All sorting functionality, performance, edge cases
 - **Storage Tests**: CRUD operations, security validation, error handling
 - **Icon Service Tests**: PowerShell execution, cleanup, security
 - **Renderer Tests**: XSS prevention, path validation, DOM manipulation
@@ -173,7 +170,7 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 
 ### Sorting Functionality Issues
 - **Type Errors**: Ensure `LauncherSettings.sortBy` includes all options
-- **Runtime Errors**: Test sorting with comprehensive Jest suite
+- **Runtime Errors**: Test sorting manually across all sort options until the Jest suite exists
 - **Performance**: Monitor sorting performance with large datasets
 
 ### Security Validation Blocking Valid Input
@@ -202,8 +199,8 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 4. **Validate PowerShell injection** protection
 
 ## Development Workflow
-1. **Write tests first** for new security-critical functionality
-2. **Run full test suite** before committing changes
+1. **Write tests first** for new security-critical functionality (once the test suite is restored - see Testing Framework)
+2. **Run full test suite** before committing changes (once it exists)
 3. **Validate security implications** of all modifications
 4. **Update documentation** when adding new security measures
 5. **Never bypass security validation** for convenience
