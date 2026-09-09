@@ -12,7 +12,7 @@ then launch them from one clean window - with icons, search, sort, and usage sta
 
 [![Download for Windows](https://img.shields.io/badge/⬇%20Download-Windows%20installer-2563eb?style=for-the-badge&logo=windows)](https://github.com/Patonero/velocity/releases/latest)
 
-![Velocity Launcher](docs/images/velocity-main.png)
+![Velocity Launcher - filtering the grid, switching to list view, and toggling the theme](docs/images/demo.gif)
 
 </div>
 
