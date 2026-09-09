@@ -429,8 +429,8 @@ function setupIpcHandlers(): void {
     
     // Silent installation - no user interaction required
     autoUpdater.quitAndInstall(
-      false, // isSilent: true for silent install
-      true   // isForceRunAfter: restart app after install
+      true, // isSilent: true for silent install
+      true  // isForceRunAfter: restart app after install
     );
     return { success: true };
   });
