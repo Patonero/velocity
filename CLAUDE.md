@@ -25,11 +25,19 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 ├── renderer/
 │   ├── index.html        # Main UI with Content Security Policy
 │   └── styles.css        # Dark theme styling
-├── dist/                 # Compiled JavaScript output
+├── dist/                 # Compiled JavaScript output (tsc) - gitignored
+├── release/              # electron-builder installer output - gitignored
+├── scripts/              # release.mjs (cut a release), extract-changelog.mjs (CI notes)
 ├── jest.config.js        # Jest testing configuration
 ├── tsconfig.test.json    # TypeScript config for tests
 └── package.json          # Dependencies and build scripts
 ```
+
+> **Keep `dist/` (tsc output) and `release/` (electron-builder output) separate.**
+> `package.json` `build.files` includes `dist/**/*`, so if electron-builder also
+> wrote there, it would package its own prior output (stale `win-unpacked/`, old
+> installers) into the app - this previously produced a 500 MB installer. A clean
+> build is ~88 MB.
 
 ## Development Commands
 - `npm run build` - Compile TypeScript files
@@ -141,7 +149,7 @@ Coverage today is focused on the security-critical validation logic - the actual
 
 Not yet covered: `main.ts`'s IPC wiring/process launching (would require mocking most of Electron), and `renderer.ts`'s actual DOM logic (card/list rendering, search filtering, view switching) - the sort *comparator* is covered via the canonical-twin pattern above, but not the DOM code that calls it.
 
-CI runs `npm test` on every push to `main` (`.github/workflows/release.yml`), before the build/package steps - a failing test blocks the release.
+CI runs `npm test` + `npm run build` on every push and PR to `main` (`.github/workflows/ci.yml`) - a failing test blocks the merge. Releases are cut separately by pushing a `vX.Y.Z` tag, which triggers `.github/workflows/release.yml` (test → build installer → publish one GitHub Release). See `VERSIONING.md`.
 
 ### Coverage gap worth knowing about
 `renderer.ts` keeps its own private copies of `escapeHtml`/`isValidFilePath`/`sanitizeInput` (and, as of `sort-utils.ts`, its `sortEmulators` comparator too) rather than importing them, because adding a real `export`/`import` to `renderer.ts` would make `tsc` emit CommonJS module boilerplate (`exports.foo = ...` / `require(...)`) into `dist/renderer.js`, and that file is loaded as a plain `<script>` tag with no CommonJS runtime present - it would throw a `ReferenceError` and break the whole UI. The tests in `security-utils.test.ts` and `sort-utils.test.ts` exercise the *same logic* via canonical copies, which is useful as regression coverage of the validation/sorting patterns themselves, but they do not execute `renderer.ts`'s actual shipped code. If either copy changes, update the other by hand. This is the general shape of the constraint - the same reasoning applies to any future extraction attempt from `renderer.ts`.

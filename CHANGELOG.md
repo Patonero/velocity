@@ -3,6 +3,21 @@
 All notable changes to Velocity Launcher are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.2] - 2026-09-09
+
+Maintenance release - no user-facing feature changes.
+
+### Changed
+- Release pipeline reworked: releases are now cut from a `vX.Y.Z` git tag
+  and published as a single, normal GitHub Release (previously every push
+  to `main` created a per-commit pre-release, which broke auto-update
+  resolution). Auto-update behaviour for end users is unchanged.
+- Project documentation consolidated and corrected (README install steps,
+  contributing guide, changelog); stale docs removed.
+
+### Added
+- Test coverage for the emulator sort comparator.
+
 ## [1.5.1] - 2026-09-09
 
 ### Changed

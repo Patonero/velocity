@@ -1,86 +1,43 @@
-# Velocity Launcher Versioning
+# Versioning & Releasing
 
-Velocity Launcher uses [Semantic Versioning](https://semver.org/) (SemVer) for version management.
+Velocity Launcher uses [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
 
-## Version Format
+- **MAJOR** - breaking changes to config format or behaviour users rely on
+- **MINOR** - new features, backwards compatible
+- **PATCH** - bug fixes and maintenance
 
-Versions follow the format: `MAJOR.MINOR.PATCH`
+## How a release happens
 
-- **MAJOR**: Incremented for incompatible API changes or breaking changes
-- **MINOR**: Incremented for new functionality that is backwards compatible
-- **PATCH**: Incremented for backwards compatible bug fixes
+Releases are **tag-triggered**. Pushing a `vX.Y.Z` tag to GitHub runs
+`.github/workflows/release.yml`, which tests, builds the Windows installer,
+and publishes a single normal GitHub Release (with `latest.yml` for
+auto-update). Plain pushes to `main` only run CI (`.github/workflows/ci.yml`)
+- they do **not** create releases.
 
-## Automatic Version Bumping
+## Cutting a release
 
-The GitHub Actions release workflow automatically determines the version bump type based on commit messages:
+1. Add a `## [X.Y.Z] - YYYY-MM-DD` section to [`CHANGELOG.md`](CHANGELOG.md)
+   describing the changes. Commit it to `main`.
+2. Run the helper:
 
-### Commit Message Conventions
-
-- **Major Version Bump**: Include `BREAKING CHANGE` or `major:` in commit message
-
-  ```
-  feat: major redesign of UI BREAKING CHANGE
-  major: remove deprecated features
-  ```
-
-- **Minor Version Bump**: Include `feat:`, `feature:`, or `minor:` in commit message
-
-  ```
-  feat: add theme editor functionality
-  feature: implement auto-discovery
-  minor: add new sorting options
-  ```
-
-- **Patch Version Bump**: Default for all other commits
-  ```
-  fix: resolve icon extraction issue
-  chore: update dependencies
-  docs: improve README
-  ```
-
-## Manual Version Bumping
-
-You can manually bump the version using the provided PowerShell script:
-
-```powershell
-# Bump patch version (1.0.0 -> 1.0.1)
-.\scripts\bump-version.ps1 patch
-
-# Bump minor version (1.0.1 -> 1.1.0)
-.\scripts\bump-version.ps1 minor
-
-# Bump major version (1.1.0 -> 2.0.0)
-.\scripts\bump-version.ps1 major
-```
-
-## Release Process
-
-1. **Automatic Releases**: Push commits to `main` branch
-
-   - Workflow analyzes commit messages
-   - Determines appropriate version bump
-   - Updates `package.json`
-   - Builds and packages the application
-   - Creates GitHub release with changelog
-
-2. **Manual Releases**: Use the manual script then push
-   ```powershell
-   .\scripts\bump-version.ps1 minor
-   git add package.json
-   git commit -m "chore: bump version to X.Y.Z"
-   git push origin main
+   ```bash
+   npm run release patch      # 1.5.1 -> 1.5.2   (or: minor | major | X.Y.Z)
+   npm run release patch --push
    ```
 
-## Version History
+   It refuses to run on a dirty tree or off `main`, checks that the
+   CHANGELOG section exists, then bumps `package.json` + `package-lock.json`,
+   commits as `release: vX.Y.Z`, and tags it.
+3. `git push --follow-tags` (or pass `--push` above).
+4. Watch <https://github.com/Patonero/velocity/actions>. The release appears
+   at <https://github.com/Patonero/velocity/releases> when the workflow
+   finishes.
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history and changes.
+The release workflow fails fast if the tag doesn't match `package.json`,
+so an accidental tag won't publish a mismatched build.
 
-## Skip CI
+## Pre-release / nightly channel
 
-To prevent the workflow from running on certain commits (like documentation updates), include `[skip ci]` in the commit message:
-
-```
-docs: update README [skip ci]
-```
-
-Note: Version bump commits automatically include `[skip ci]` to prevent infinite loops.
+Not wired up yet - planned as a follow-up (opt-in "pre-release builds"
+toggle in Settings, fed by a separate nightly workflow). Until then there
+is only the stable channel.

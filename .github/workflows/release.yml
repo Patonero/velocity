@@ -1,55 +1,55 @@
-name: Build and Tag
+name: Release
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - "README.md"
-      - "docs/**"
-      - ".gitignore"
-      - "Claude.md"
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build a release for, e.g. v1.5.2"
+        required: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  SKIP_CI: ${{ contains(github.event.head_commit.message, '[skip ci]') }}
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-and-tag:
+  release:
+    runs-on: windows-latest
     permissions:
       contents: write
-      id-token: write
-    runs-on: windows-latest
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cache Electron Builder
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/electron
-            ~/.cache/electron-builder
-          key: electron-builder-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            electron-builder-${{ runner.os }}-
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          RAW="${{ github.event.inputs.tag || github.ref_name }}"
+          TAG="${RAW#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$PKG" != "$VERSION" ]; then
+            echo "::error::Tag $TAG does not match package.json version $PKG"
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run tests
         run: npm test
@@ -60,68 +60,24 @@ jobs:
       - name: Install native deps
         run: npx electron-builder install-app-deps
 
-      - name: Package Electron app
-        run: npx electron-builder --win nsis --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package Windows installer
+        run: npx electron-builder --win nsis --publish never
 
-      - name: Generate build tag and get version
-        id: build-tag
-        run: |
-          $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-          $commitHash = git rev-parse --short HEAD
-          $packageJson = Get-Content package.json | ConvertFrom-Json
-          $version = $packageJson.version
-          $buildTag = "v$version-$commitHash"
-          echo "tag=$buildTag" >> $env:GITHUB_OUTPUT
-          echo "version=$version" >> $env:GITHUB_OUTPUT
-          echo "Generated build tag: $buildTag"
-          echo "Package version: $version"
-        shell: powershell
+      - name: Extract release notes
+        id: notes
+        shell: bash
+        run: node scripts/extract-changelog.mjs "${{ steps.version.outputs.version }}" > RELEASE_NOTES.md
 
-      - name: Configure Git
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-      - name: Create and push tag
-        run: |
-          $buildTag = "${{ steps.build-tag.outputs.tag }}"
-          $buildVersion = "${{ steps.build-tag.outputs.version }}"
-          git tag $buildTag -m "Release version $buildVersion - Build $buildTag"
-          git push origin $buildTag
-          echo "Created and pushed tag: $buildTag"
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.build-tag.outputs.tag }}
-          name: "${{ steps.build-tag.outputs.tag }}"
-          body: |
-            **Build Information:**
-            - Version: ${{ steps.build-tag.outputs.version }}
-            - Commit: ${{ github.sha }}
-            - Branch: ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body_path: RELEASE_NOTES.md
           draft: false
-          prerelease: true
+          prerelease: false
+          make_latest: true
           files: |
-            dist/velocity-${{ steps.build-tag.outputs.version }}-x64.exe
-            dist/latest.yml
-            dist/*.blockmap
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload build artifacts (backup)
-        uses: actions/upload-artifact@v4
-        with:
-          name: velocity-launcher-${{ steps.build-tag.outputs.tag }}
-          path: |
-            dist/*.exe
-            dist/*.zip
-            dist/*.msi
-            dist/latest.yml
-            dist/*.blockmap
-          retention-days: 30
+            release/velocity-*-x64.exe
+            release/velocity-*-x64.exe.blockmap
+            release/latest.yml

@@ -26,12 +26,12 @@ scripts/
 Thumbs.db
 
 # Build artifacts that shouldn't be included
+release/
 dist/tests/
 *.d.ts.map
 *.js.map
 
-# Documentation
-README.md
-CHANGELOG.md
-VERSIONING.md
-Claude.md
+# Documentation (also excluded by the package.json "files" allowlist)
+*.md
+LICENSE
+.github/
