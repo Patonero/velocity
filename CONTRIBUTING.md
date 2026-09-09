@@ -9,7 +9,8 @@ Electron app, so a couple of things matter more here than in a typical project.
 git clone https://github.com/Patonero/velocity.git
 cd velocity
 npm install
-npm run dev          # build + launch with hot-reload and devtools
+npm run dev          # build + launch in development mode (devtools enabled)
+npm run dev:watch    # same, plus rebuild + relaunch on file changes
 ```
 
 Other useful commands:

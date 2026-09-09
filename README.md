@@ -75,6 +75,14 @@ _Type to filter the system type instead of scrolling a 50-option dropdown_
 - **Descriptions**: Show or hide emulator descriptions on cards in Settings → Appearance
 - **Sorting Options**: Keep your collection organized how you prefer
 
+![List view](docs/images/list-view.png)
+
+_The compact list view, sorted by last used_
+
+![Light theme](docs/images/light-theme.png)
+
+_The same grid in the light theme_
+
 ## ⚙️ Configuration
 
 ### File Locations
