@@ -21,8 +21,12 @@ npm test             # run the Jest suite
 npm run test:watch   # run tests in watch mode
 ```
 
-CI runs `npm test` on every push to `main` before packaging a release, so a
-failing test blocks the build.
+`npm run dev:watch` recompiles and relaunches the app on changes to `src/`;
+changes to `renderer/` reload the page without a restart.
+
+CI (`.github/workflows/ci.yml`) runs `npm test` and `npm run build` on every
+push and PR to `main`, so a failing test blocks the merge. Releases are cut
+separately from a `vX.Y.Z` tag - see [VERSIONING.md](VERSIONING.md).
 
 ## Before you open a PR
 

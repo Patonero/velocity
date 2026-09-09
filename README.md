@@ -1,234 +1,155 @@
+<div align="center">
+
 # Velocity Launcher
 
-A modern, secure emulator launcher for Windows that makes organizing and launching your favorite retro games simple and beautiful.
+**A dead-simple launcher for your emulators.** Add your emulator executables once,
+then launch them from one clean window - with icons, search, sort, and usage stats.
 
-![Velocity Launcher Screenshot](docs/images/velocity-main.png)
-_Velocity Launcher's clean, dark-themed interface_
+[![Latest release](https://img.shields.io/github/v/release/Patonero/velocity?sort=semver)](https://github.com/Patonero/velocity/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Patonero/velocity/total)](https://github.com/Patonero/velocity/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/Patonero/velocity/ci.yml?branch=main&label=CI)](https://github.com/Patonero/velocity/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/Patonero/velocity)](LICENSE)
 
-## ✨ Features
+[![Download for Windows](https://img.shields.io/badge/⬇%20Download-Windows%20installer-2563eb?style=for-the-badge&logo=windows)](https://github.com/Patonero/velocity/releases/latest)
 
-- **🎮 Universal Emulator Support** - Launch any emulator with custom arguments and working directories
-- **🖼️ Automatic Icon Extraction** - Beautiful icons extracted directly from your emulator executables
-- **🔍 Search & Sort** - Find an emulator instantly, or sort by name, date added, last launched, launch count, or system type
-- **🔒 Security First** - Built with comprehensive security protections against malicious input
-- **🎨 Clean, Modern Interface** - Flat dark/light theme with a single accent color, grid or list view, and adjustable card density
-- **⌨️ Keyboard Friendly** - Full modal focus management and screen-reader labels throughout
-- **📊 Usage Tracking** - Keep track of launch counts and last played dates
-- **🔧 Easy Configuration** - A searchable system-type field instead of scrolling a giant dropdown
-- **🌙 Theme Support** - Auto, light, and dark themes that follow your system preferences
-- **⬇️ Quiet Updates** - Auto-updates install silently in the background, no wizard, no clicks
+![Velocity Launcher](docs/images/velocity-main.png)
 
-## 🚀 Quick Start
+</div>
 
-### Prerequisites
+## Why Velocity?
 
-- Windows 10 or later
-- Your favorite emulators already installed
+Playnite and LaunchBox are powerful, but they're whole game-library managers -
+box art, metadata scraping, ROM folders, plugins. If you just want a tidy way to
+**start the emulators you already have installed**, that's a lot of app to carry.
 
-### Installation
+Velocity does one thing: you point it at an emulator's `.exe` (with optional
+arguments and working directory), it pulls the icon, and it gives you a fast
+grid or list to launch from. Free, open source, no account, no telemetry.
 
-1. **Download the latest release** from the [Releases page](https://github.com/Patonero/velocity/releases)
-2. **Extract the zip file** to your desired location (e.g., `C:\Program Files\Velocity Launcher\`)
-3. **Run `Velocity Launcher.exe`** to start the application
+## Features
 
-> 💡 **First Launch**: The app will create its configuration folder at `%APPDATA%\velocity\` automatically
+- **Any emulator** - anything with an executable, plus custom arguments and a working directory
+- **Automatic icons** - extracted straight from the emulator's `.exe`
+- **Search & sort** - filter instantly; sort by name, date added, last launched, launch count, or system type
+- **Grid or list view** - with adjustable card density
+- **Auto, light & dark themes** - follows your system by default
+- **Usage stats** - launch counts and last-played dates
+- **Silent auto-updates** - new versions install in the background, no wizard, no clicks
+- **Keyboard friendly** - full focus management and screen-reader labels
+- **Security-hardened** - input validation, path-traversal checks, and safe process spawning throughout, with automated tests on the security-critical logic
 
-## 📋 Setup Guide
+## Install
 
-### Adding Your First Emulator
+1. Download **`velocity-<version>-x64.exe`** from the
+   [latest release](https://github.com/Patonero/velocity/releases/latest).
+2. Run it. It installs per-user (no admin prompt), adds Start Menu and desktop
+   shortcuts, and launches automatically.
 
-1. **Click "Add Emulator"** on the main screen
-2. **Fill in the details**:
-   - **Name**: Display name for your emulator (e.g., "PlayStation 2")
-   - **Type**: Type to search - the system type field filters as you go instead of scrolling a giant dropdown
-   - **Description**: Optional description for your setup
-   - **Executable Path**: Browse to your emulator's .exe file
-   - **Arguments**: Optional command-line arguments for the emulator
-   - **Working Directory**: Optional working directory (usually the emulator's folder)
+> **"Windows protected your PC"?** The installer isn't code-signed yet, so
+> SmartScreen may warn about an unknown publisher. Click **More info → Run anyway**.
+> Code signing is on the [roadmap](ROADMAP.md).
+
+Requires Windows 10 or later. Config lives in `%APPDATA%\velocity\` and is created
+on first launch.
+
+## Adding an emulator
+
+1. Click **Add Emulator**.
+2. Fill in:
+   - **Name** - e.g. "PlayStation 2"
+   - **Type** - type to filter the system list instead of scrolling it
+   - **Executable Path** - browse to the emulator's `.exe`
+   - **Arguments** *(optional)* - e.g. `--fullscreen`
+   - **Working Directory** *(optional)* - usually the emulator's own folder
+3. Click **Add Emulator** to save.
 
 ![Searching for a system type](docs/images/add-emulator-dialog.png)
 
-_Type to filter the system type instead of scrolling a 50-option dropdown_
-
-3. **Click "Add Emulator"** to save
-
-## 🎮 Using Velocity Launcher
-
-### Launching Games
-
-- **Click any emulator card** to launch the emulator instantly
-- **Use the play button** for explicit launching
-- **View launch statistics** including launch count and last played date
-
-### Managing Emulators
-
-- **Edit**: Click the pencil icon to modify emulator settings
-- **Delete**: Click the trash icon to remove an emulator (with a confirmation prompt)
-- **Search**: Type in the search box to filter your collection instantly
-- **Sort**: Use the dropdown to organize by name, date, usage, or type
-
-### Customization
-
-- **Theme Toggle**: Click the theme button to cycle between Auto/Light/Dark modes
-- **Grid or List View**: Switch between a card grid and a compact list
-- **Card Size**: Adjust grid density (small/medium/large) in Settings → Appearance
-- **Descriptions**: Show or hide emulator descriptions on cards in Settings → Appearance
-- **Sorting Options**: Keep your collection organized how you prefer
+Then click any card to launch, or the play button for an explicit launch. Edit
+with the pencil icon, remove with the trash icon (with a confirmation).
 
 ![List view](docs/images/list-view.png)
 
-_The compact list view, sorted by last used_
-
 ![Light theme](docs/images/light-theme.png)
 
-_The same grid in the light theme_
+## Configuration
 
-## ⚙️ Configuration
+| What | Where |
+| --- | --- |
+| Config | `%APPDATA%\velocity\velocity-launcher-config.json` |
+| Icon cache | `%APPDATA%\velocity\icons\` |
 
-### File Locations
-
-- **Configuration**: `%APPDATA%\velocity\velocity-launcher-config.json`
-- **Icons Cache**: `%APPDATA%\velocity\icons\`
-- **Logs**: Check the application folder for any error logs
-
-### Manual Configuration
-
-Advanced users can edit the configuration file directly:
+To back up, copy the whole `%APPDATA%\velocity\` folder. Advanced users can edit
+the JSON directly - each emulator entry looks like:
 
 ```json
 {
-  "emulators": [
-    {
-      "id": "unique-identifier",
-      "name": "PlayStation 2",
-      "executablePath": "C:\\Emulators\\PCSX2\\pcsx2-qt.exe",
-      "workingDirectory": "C:\\Emulators\\PCSX2\\",
-      "platform": "Windows",
-      "emulatorType": "PlayStation 2",
-      "arguments": "--fullscreen",
-      "dateAdded": "2024-01-01T00:00:00.000Z",
-      "launchCount": 5,
-      "lastLaunched": "2024-01-15T12:30:00.000Z",
-      "iconPath": "C:\\Users\\You\\AppData\\Roaming\\velocity\\icons\\unique-identifier.png"
-    }
-  ],
-  "theme": "dark",
-  "sortBy": "name"
+  "id": "unique-identifier",
+  "name": "PlayStation 2",
+  "executablePath": "C:\\Emulators\\PCSX2\\pcsx2-qt.exe",
+  "workingDirectory": "C:\\Emulators\\PCSX2\\",
+  "emulatorType": "PlayStation 2",
+  "arguments": "--fullscreen",
+  "dateAdded": "2024-01-01T00:00:00.000Z",
+  "launchCount": 5,
+  "lastLaunched": "2024-01-15T12:30:00.000Z"
 }
 ```
 
-## 🔐 Security Features
+## How updates work
 
-Velocity Launcher is built with security as a top priority:
+The app checks GitHub for a newer release shortly after startup. If there is one,
+it downloads and installs it silently in the background (delta patches when
+possible) and applies it on the next launch - no prompts. Update behaviour can be
+adjusted in **Settings → General**.
 
-- **Input Validation**: All user input is sanitized to prevent injection attacks
-- **Path Validation**: File paths are validated to prevent directory traversal
-- **Process Security**: Emulator launches use secure process spawning
-- **Content Security**: Built-in XSS protection and Content Security Policy
-- **Secure Icon Extraction**: Safe PowerShell execution for extracting emulator icons
-- **Tested**: Security-critical validation logic (path checks, argument sanitization, storage validation) has automated test coverage, and CI runs the full suite before every release
+## Security
 
-## 🛠️ Development
+Velocity treats every emulator path, launch argument, and piece of typed text as
+untrusted input:
 
-### Building from Source
+- **Input & path validation** - traversal attempts, protocol injection, and
+  control characters are rejected before anything is trusted
+- **Safe process spawning** - arguments are sanitized and launches never go
+  through a shell
+- **Safe icon extraction** - parameterized PowerShell, no string interpolation
+- **XSS protection** - HTML escaping plus a Content Security Policy in the renderer
+- **Tested** - the path/argument/storage validation logic has automated coverage,
+  and CI runs the suite on every push
 
-1. **Clone the repository**:
+See [`CLAUDE.md`](CLAUDE.md) for the full security architecture.
 
-   ```bash
-   git clone https://github.com/Patonero/velocity.git
-   cd velocity
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
-   npm install
-   ```
-
-3. **Build the application**:
-
-   ```bash
-   npm run build
-   ```
-
-4. **Run in development mode**:
-   ```bash
-   npm run electron
-   ```
-
-### Running Tests
+## Building from source
 
 ```bash
-npm test                # Run all tests
-npm run test:watch      # Run tests in watch mode
+git clone https://github.com/Patonero/velocity.git
+cd velocity
+npm install
+npm run build        # compile TypeScript
+npm run electron     # run the app
+npm test             # run the Jest suite
+npm run dist:win     # build the installer locally into dist/
 ```
 
-## 🤝 Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
+[VERSIONING.md](VERSIONING.md) for how releases are cut.
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+## Contributing
 
-### Areas for Contribution
+Contributions welcome - see [CONTRIBUTING.md](CONTRIBUTING.md). Good places to
+start: localization, themes, macOS/Linux support, bug reports. Longer-term plans
+are in [ROADMAP.md](ROADMAP.md).
 
-- 🌍 **Localization**: Help translate Velocity Launcher
-- 🎨 **Themes**: Create new visual themes
-- 📱 **Platform Support**: Extend to macOS and Linux
-- 🔧 **Features**: Add new functionality
-- 🐛 **Bug Reports**: Help us improve reliability
+- 🐛 [Report a bug](https://github.com/Patonero/velocity/issues/new?template=bug_report.md)
+- 💡 [Request a feature](https://github.com/Patonero/velocity/issues/new?template=feature_request.md)
+- 💬 [Discussions](https://github.com/Patonero/velocity/discussions)
 
-## 🗺️ Roadmap
+## License
 
-Here's what we're planning for future releases:
-
-### 🎨 Theme Editor (v2.0)
-
-- **Custom CSS Upload**: Import your own CSS themes for complete visual customization
-- **In-App Theme Editor**: Visual theme creator with color pickers and live preview
-- **Theme Sharing**: Export and share custom themes with the community
-- **Theme Gallery**: Browse and download community-created themes
-
-Want to suggest a feature? [Open a feature request](https://github.com/Patonero/velocity/issues/new?template=feature_request.md)!
-
-## 📝 Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
-
-## 🆘 Support
-
-### Common Issues
-
-**Q: Icons aren't showing for my emulators**
-A: Make sure the executable path is correct and Velocity Launcher has permission to access the file.
-
-**Q: My emulator won't launch**
-A: Check that the executable path is valid and try launching the emulator manually first to ensure it works.
-
-**Q: Can I add portable emulators?**
-A: Yes! Just point to the portable executable file. You may want to set a working directory.
-
-**Q: How do I backup my configuration?**
-A: Copy the `%APPDATA%\velocity\` folder to back up all settings and cached icons.
-
-### Getting Help
-
-- 🐛 **Bug Reports**: [Create an issue](https://github.com/Patonero/velocity/issues/new?template=bug_report.md)
-- 💡 **Feature Requests**: [Request a feature](https://github.com/Patonero/velocity/issues/new?template=feature_request.md)
-- 💬 **Discussions**: [Join the conversation](https://github.com/Patonero/velocity/discussions)
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [Electron](https://www.electronjs.org/) for cross-platform desktop development
-- Inspired by modern launcher applications and the retro gaming community
-
----
+[MIT](LICENSE). Built with [Electron](https://www.electronjs.org/).
 
 <div align="center">
 
-**Enjoy your retro gaming! 🎮**
-
-[⭐ Star this repository](https://github.com/Patonero/velocity) if you find it useful!
+**[⭐ Star this repo](https://github.com/Patonero/velocity)** if it's useful to you.
 
 </div>
