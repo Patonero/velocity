@@ -13,12 +13,14 @@ export interface EmulatorConfig {
   launchCount: number;
 }
 
+export type EmulatorSortBy = 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount' | 'emulatorType';
+
 export interface LauncherSettings {
   emulators: EmulatorConfig[];
   theme: 'light' | 'dark' | 'auto';
   viewMode: 'grid' | 'list';
   gridSize: 'small' | 'medium' | 'large';
-  sortBy: 'name' | 'dateAdded' | 'lastLaunched' | 'launchCount' | 'emulatorType';
+  sortBy: EmulatorSortBy;
   showDescriptions: boolean;
   autoUpdateCheck: boolean;
   launchTracking: boolean;
