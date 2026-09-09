@@ -9,12 +9,14 @@ _Velocity Launcher's clean, dark-themed interface_
 
 - **🎮 Universal Emulator Support** - Launch any emulator with custom arguments and working directories
 - **🖼️ Automatic Icon Extraction** - Beautiful icons extracted directly from your emulator executables
+- **🔍 Search & Sort** - Find an emulator instantly, or sort by name, date added, last launched, launch count, or system type
 - **🔒 Security First** - Built with comprehensive security protections against malicious input
-- **🎨 Beautiful Interface** - Modern dark theme with responsive grid layout
+- **🎨 Clean, Modern Interface** - Flat dark/light theme with a single accent color, grid or list view, and adjustable card density
+- **⌨️ Keyboard Friendly** - Full modal focus management and screen-reader labels throughout
 - **📊 Usage Tracking** - Keep track of launch counts and last played dates
-- **🔧 Easy Configuration** - Simple forms for adding and editing emulators
+- **🔧 Easy Configuration** - A searchable system-type field instead of scrolling a giant dropdown
 - **🌙 Theme Support** - Auto, light, and dark themes that follow your system preferences
-- **📂 Smart Organization** - Sort by name, date added, last launched, launch count, or emulator type
+- **⬇️ Quiet Updates** - Auto-updates install silently in the background, no wizard, no clicks
 
 ## 🚀 Quick Start
 
@@ -38,15 +40,15 @@ _Velocity Launcher's clean, dark-themed interface_
 1. **Click "Add Emulator"** on the main screen
 2. **Fill in the details**:
    - **Name**: Display name for your emulator (e.g., "PlayStation 2")
-   - **Type**: Select from popular emulator types or choose "Other"
+   - **Type**: Type to search - the system type field filters as you go instead of scrolling a giant dropdown
    - **Description**: Optional description for your setup
    - **Executable Path**: Browse to your emulator's .exe file
    - **Arguments**: Optional command-line arguments for the emulator
    - **Working Directory**: Optional working directory (usually the emulator's folder)
 
-![Add Emulator Dialog](docs/images/add-emulator-dialog.png)
+![Searching for a system type](docs/images/add-emulator-dialog.png)
 
-_Easy emulator configuration_
+_Type to filter the system type instead of scrolling a 50-option dropdown_
 
 3. **Click "Add Emulator"** to save
 
@@ -55,22 +57,22 @@ _Easy emulator configuration_
 ### Launching Games
 
 - **Click any emulator card** to launch the emulator instantly
-- **Use the play button** (▶) for explicit launching
+- **Use the play button** for explicit launching
 - **View launch statistics** including launch count and last played date
 
 ### Managing Emulators
 
-- **Edit**: Click the ⚙️ button to modify emulator settings
-- **Delete**: Click the 🗑️ button to remove an emulator
+- **Edit**: Click the pencil icon to modify emulator settings
+- **Delete**: Click the trash icon to remove an emulator (with a confirmation prompt)
+- **Search**: Type in the search box to filter your collection instantly
 - **Sort**: Use the dropdown to organize by name, date, usage, or type
-
-![Emulator Grid](docs/images/emulator-grid.png)
-_Your emulator collection at a glance_
 
 ### Customization
 
 - **Theme Toggle**: Click the theme button to cycle between Auto/Light/Dark modes
-- **Grid Layout**: Responsive cards that adapt to your window size
+- **Grid or List View**: Switch between a card grid and a compact list
+- **Card Size**: Adjust grid density (small/medium/large) in Settings → Appearance
+- **Descriptions**: Show or hide emulator descriptions on cards in Settings → Appearance
 - **Sorting Options**: Keep your collection organized how you prefer
 
 ## ⚙️ Configuration
@@ -116,6 +118,7 @@ Velocity Launcher is built with security as a top priority:
 - **Process Security**: Emulator launches use secure process spawning
 - **Content Security**: Built-in XSS protection and Content Security Policy
 - **Secure Icon Extraction**: Safe PowerShell execution for extracting emulator icons
+- **Tested**: Security-critical validation logic (path checks, argument sanitization, storage validation) has automated test coverage, and CI runs the full suite before every release
 
 ## 🛠️ Development
 
@@ -125,7 +128,7 @@ Velocity Launcher is built with security as a top priority:
 
    ```bash
    git clone https://github.com/Patonero/velocity.git
-   cd velocity-launcher
+   cd velocity
    ```
 
 2. **Install dependencies**:
@@ -210,7 +213,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - Built with [Electron](https://www.electronjs.org/) for cross-platform desktop development
-- UI icons from the system emoji set
 - Inspired by modern launcher applications and the retro gaming community
 
 ---
