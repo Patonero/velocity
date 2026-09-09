@@ -48,28 +48,28 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 - Validates executable paths against path traversal attacks
 
 ### PowerShell Injection Mitigation  
-**Location**: `src/icon-service.ts:45-80`
+**Location**: `src/icon-service.ts` (`extractIconFromExecutable`)
 - Icon extraction uses parameterized PowerShell execution
 - Script files written to secure temporary location with cleanup
 - No direct string interpolation in PowerShell commands
 - Comprehensive path validation before execution
 
 ### XSS Prevention
-**Location**: `src/renderer.ts:4-11, 40-48`
+**Location**: `src/renderer.ts` (`escapeHtml`, `sanitizeInput`)
 - HTML escaping via `escapeHtml()` function for all user content
 - Input sanitization via `sanitizeInput()` function removes XSS characters
 - Content Security Policy configured in `renderer/index.html`
 - All DOM insertions use escaped content
 
 ### Path Validation
-**Location**: `src/renderer.ts:13-38`
+**Location**: `src/renderer.ts` (`isValidFilePath`)
 - Windows-specific path validation in `isValidFilePath()` function
 - Allows valid drive letters (C:) while blocking dangerous patterns
 - Prevents path traversal, protocol injection, and control characters
 - Special handling for colon placement in Windows paths
 
 ### Input Validation
-**Location**: `src/storage.ts:15-45`
+**Location**: `src/storage.ts` (`isValidEmulatorData`, `sanitizeString`)
 - Comprehensive validation for all emulator data
 - Secure ID generation: `emulator-${timestamp}-${random}`
 - String sanitization removes potential XSS characters
@@ -135,8 +135,12 @@ Coverage today is focused on the security-critical validation logic - the actual
 - **`security-utils.test.ts`**: `src/security-utils.ts` - the execution-domain functions extracted from `main.ts` (`isValidExecutablePath`, `sanitizeArguments`, `isValidWorkingDirectory`) plus canonical/tested twins of `renderer.ts`'s display-domain functions (`escapeHtmlForDisplay`, `isValidDisplayPath`, `sanitizeDisplayInput` - see coverage gap below)
 - **`storage.test.ts`**: `StorageService` CRUD, `isValidEmulatorData`, `sanitizeString`, corrupt-config fallback
 - **`icon-service.test.ts`**: `IconService.extractIcon`/`cleanupUnusedIcons`, `isValidIconPath`, `isValidOutputPath`, PowerShell invocation via mocked `child_process.spawn` (verifies parameterized argv, not string interpolation)
+- **`update-cache.test.ts`**: `UpdateCache` TTL/expiry logic, corrupt-cache fallback, the stale-while-revalidate branch in `getInstantResult`
+- **`update-service.test.ts`**: `UpdateService.checkForUpdatesOptimized` (cache short-circuit, available/not-available/error/timeout paths, the concurrent-check guard) via a mocked `electron-updater` event emitter, plus `getEstimatedPatchSize`
 
-Not yet covered: `main.ts`'s IPC wiring/process launching (would require mocking most of Electron), `update-service.ts`, and all of `renderer.ts`'s DOM logic (sorting, card/list rendering, search filtering).
+Not yet covered: `main.ts`'s IPC wiring/process launching (would require mocking most of Electron), and all of `renderer.ts`'s DOM logic (sorting, card/list rendering, search filtering).
+
+CI runs `npm test` on every push to `main` (`.github/workflows/release.yml`), before the build/package steps - a failing test blocks the release.
 
 ### Coverage gap worth knowing about
 `renderer.ts` keeps its own private copies of `escapeHtml`/`isValidFilePath`/`sanitizeInput` rather than importing them from `security-utils.ts`, because adding a real `export` to `renderer.ts` would make `tsc` emit CommonJS module boilerplate (`exports.foo = ...`) into `dist/renderer.js`, and that file is loaded as a plain `<script>` tag with no CommonJS runtime present - it would throw `ReferenceError: exports is not defined` and break the whole UI. The tests in `security-utils.test.ts` exercise the *same logic* via canonical copies (`escapeHtmlForDisplay`, etc.), which is useful as regression coverage of the validation patterns themselves, but they do not execute `renderer.ts`'s actual shipped code. If either copy changes, update the other by hand.
