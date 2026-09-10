@@ -50,6 +50,9 @@
   "build": {
     "appId": "com.velocity.launcher",
     "productName": "Velocity Launcher",
+    "extraMetadata": {
+      "description": "Velocity Launcher"
+    },
     "directories": {
       "output": "release"
     },

@@ -3,6 +3,16 @@
 All notable changes to Velocity Launcher are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.4] - 2026-09-10
+
+### Fixed
+- Task Manager now shows the app and its helper processes as "Velocity
+  Launcher" instead of the full "A modern, secure emulator launcher for
+  Windows" description. The Windows executable's `FileDescription` (which
+  Task Manager uses as the process name, and which every Electron child
+  process inherits) is now set explicitly rather than derived from the
+  npm package description.
+
 ## [1.5.3] - 2026-09-10
 
 ### Fixed
