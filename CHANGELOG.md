@@ -3,6 +3,17 @@
 All notable changes to Velocity Launcher are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.6] - 2026-09-10
+
+### Fixed
+- The settings icon (header and the Settings modal's "General" tab) was a
+  circle with straight radial spokes — nearly indistinguishable from the
+  sun theme icon beside it. It's now a proper cog.
+
+### Changed
+- "Check for Updates" setting relabelled "Automatic Updates" with copy
+  that matches the background-download behaviour introduced in 1.5.5.
+
 ## [1.5.5] - 2026-09-10
 
 ### Changed
