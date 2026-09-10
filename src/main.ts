@@ -7,6 +7,7 @@ import * as fs from "fs";
 import { StorageService } from "./storage";
 import { IconService } from "./icon-service";
 import { UpdateService } from "./update-service";
+import { AppState, classifyLaunch, LaunchKind } from "./app-state";
 import {
   isValidExecutablePath,
   sanitizeArguments,
@@ -54,78 +55,74 @@ let splashWindow: BrowserWindow | null = null;
 let storageService: StorageService;
 let iconService: IconService;
 let updateService: UpdateService;
+let appState: AppState;
+let launchKind: LaunchKind = "normal";
 const launchedProcesses = new Set<number>();
 const runningEmulators = new Map<string, number>(); // emulatorId -> PID
+
+// Send an update-lifecycle event to the main window only. The splash window is
+// deliberately not a target - it is a pure branding screen now and never waits
+// on or reacts to the updater (see createSplashWindow).
+function sendToMainWindow(channel: string, ...args: any[]): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, ...args);
+  }
+}
 
 // Configure auto-updater
 if (process.env.NODE_ENV !== "development") {
   autoUpdater.logger = log;
   log.transports.file.level = "info";
-  
-  // Configure for silent updates
-  autoUpdater.autoDownload = false; // We'll control the download timing
-  autoUpdater.autoInstallOnAppQuit = false; // We'll control the install timing
 
-  // Auto-updater event listeners
+  // Fully silent updates: download in the background as soon as one is found,
+  // and fall back to installing on quit if the user never clicks "Restart".
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
   autoUpdater.on("checking-for-update", () => {
     console.log("Checking for update...");
   });
 
   autoUpdater.on("update-available", (info) => {
-    console.log("Update available:", info.version);
-    const targetWindow = splashWindow || mainWindow;
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("update-available", info);
-    }
+    console.log("Update available:", info.version, "- downloading in background");
+    sendToMainWindow("update-available", info);
   });
 
-  autoUpdater.on("update-not-available", (info) => {
+  autoUpdater.on("update-not-available", () => {
     console.log("Update not available");
-    const targetWindow = splashWindow || mainWindow;
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("update-not-available", info);
-    }
+    sendToMainWindow("update-not-available");
   });
 
   autoUpdater.on("error", (err) => {
-    console.error("Update error:", err);
-    const targetWindow = splashWindow || mainWindow;
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      // Provide user-friendly error messages
-      let errorMessage = err.message;
-      if (err.message.includes("EACCES") || err.message.includes("permission")) {
-        errorMessage = "Update failed: Please restart as administrator or check file permissions";
-      } else if (err.message.includes("network") || err.message.includes("ENOTFOUND")) {
-        errorMessage = "Update failed: Check your internet connection";
-      }
-      targetWindow.webContents.send("update-error", errorMessage);
-    }
+    // Update failures must never reach the UI on their own. A failed background
+    // check/download is a non-event for the user - they keep using the app and
+    // we retry on the next launch. Only an install the user explicitly asked
+    // for surfaces an error, and that is handled at the call site.
+    console.error("Update error (suppressed from UI):", err);
   });
 
   autoUpdater.on("download-progress", (progressObj) => {
     const speedMB = (progressObj.bytesPerSecond / 1024 / 1024).toFixed(1);
     const totalMB = (progressObj.total / 1024 / 1024).toFixed(1);
     const transferredMB = (progressObj.transferred / 1024 / 1024).toFixed(1);
-    
-    const logMessage = `Delta update: ${speedMB} MB/s - ${progressObj.percent.toFixed(1)}% (${transferredMB}/${totalMB} MB)`;
-    console.log(logMessage);
-    
-    const targetWindow = splashWindow || mainWindow;
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("download-progress", {
-        ...progressObj,
-        isDelta: true,
-        estimatedSavings: parseFloat(totalMB) < 50 ? '85% smaller than full download' : 'Differential patch'
-      });
-    }
+
+    console.log(
+      `Update download: ${speedMB} MB/s - ${progressObj.percent.toFixed(1)}% (${transferredMB}/${totalMB} MB)`
+    );
+
+    sendToMainWindow("download-progress", {
+      ...progressObj,
+      isDelta: true,
+      estimatedSavings:
+        parseFloat(totalMB) < 50
+          ? "85% smaller than full download"
+          : "Differential patch",
+    });
   });
 
   autoUpdater.on("update-downloaded", (info) => {
     console.log("Update downloaded:", info.version);
-    const targetWindow = splashWindow || mainWindow;
-    if (targetWindow && !targetWindow.isDestroyed()) {
-      targetWindow.webContents.send("update-downloaded", info);
-    }
+    sendToMainWindow("update-downloaded", info);
   });
 }
 
@@ -190,20 +187,29 @@ function createMainWindow(): void {
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
 
   mainWindow.once("ready-to-show", () => {
-    // Close splash window if it exists
+    // Hand off from the splash - the splash never blocked on anything, it was
+    // just branding while this window loaded.
     if (splashWindow && !splashWindow.isDestroyed()) {
       splashWindow.close();
     }
     mainWindow?.show();
-    
-    // Start background update check for next startup if enabled
+
+    // Tell the user we just self-updated (clean update -> restart -> "here's
+    // what changed" flow, instead of the version silently changing).
+    if (launchKind === "updated") {
+      sendToMainWindow("app-updated", app.getVersion());
+    }
+
+    // Background update check - fully non-blocking, runs after the window is
+    // already interactive. Any update found downloads silently and the renderer
+    // gets an "update-downloaded" event when it is ready to install.
     if (process.env.NODE_ENV !== "development") {
       setTimeout(() => {
         const settings = storageService.loadSettings();
-        if (settings.autoUpdateCheck !== false) { // Default to true if not set
+        if (settings.autoUpdateCheck !== false) {
           updateService?.backgroundUpdateCheck();
         }
-      }, 2000); // Wait 2 seconds after main window shows
+      }, 2000);
     }
   });
 
@@ -433,13 +439,16 @@ function setupIpcHandlers(): void {
     if (process.env.NODE_ENV === "development") {
       return { success: false, message: "Updates disabled in development" };
     }
-    
-    // Silent installation - no user interaction required
-    autoUpdater.quitAndInstall(
-      true, // isSilent: true for silent install
-      true  // isForceRunAfter: restart app after install
-    );
-    return { success: true };
+
+    try {
+      // Silent install, relaunch afterwards. This is the user explicitly
+      // clicking "Restart" on the update-ready toast.
+      autoUpdater.quitAndInstall(true, true);
+      return { success: true };
+    } catch (error) {
+      console.error("Error installing update:", error);
+      return { success: false, error: (error as Error).message };
+    }
   });
 
   ipcMain.handle("updater:get-version", () => {
@@ -452,17 +461,6 @@ function setupIpcHandlers(): void {
       return { success: true };
     }
     return { success: false, message: "Cache clearing only available in development" };
-  });
-
-  // Splash screen handlers
-  ipcMain.handle("splash:open-main-window", () => {
-    if (!mainWindow) {
-      createMainWindow();
-    } else if (!mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    return true;
   });
 }
 
@@ -477,14 +475,23 @@ app.whenReady().then(() => {
   storageService = new StorageService();
   iconService = new IconService();
   updateService = new UpdateService();
+
+  // Recognise a just-happened self-update before we record the current version.
+  appState = new AppState(app.getPath("userData"));
+  launchKind = classifyLaunch(appState.readLastLaunchedVersion(), app.getVersion());
+  appState.writeLastLaunchedVersion(app.getVersion());
+
   setupIpcHandlers();
 
-  // Start with splash screen
+  // Splash and main window come up together. The splash is only branding while
+  // the main window loads - it never waits on the update check - and the main
+  // window's ready-to-show closes it.
   createSplashWindow();
+  createMainWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createSplashWindow();
+      createMainWindow();
     }
   });
 });

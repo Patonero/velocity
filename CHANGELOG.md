@@ -3,6 +3,25 @@
 All notable changes to Velocity Launcher are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.5] - 2026-09-10
+
+### Changed
+- The splash screen no longer blocks launch on an update check. It's now
+  pure branding shown while the main window loads, and the app opens as
+  soon as it's ready instead of after a network round-trip to GitHub.
+- Updates are fully background: any update downloads silently, then a
+  toast ("Update ready — restart to apply") appears in the app with a
+  Restart button. Nothing interrupts you mid-use.
+- After a silent update, the app shows a brief "Updated to vX.Y.Z" toast
+  on next launch instead of the version changing with no acknowledgement.
+
+### Fixed
+- Removed the "Update failed" flash that could appear on the splash right
+  before the app opened. It was caused by an update check with no update
+  available spuriously kicking off a download, which errored. Failed
+  background update checks/downloads are now silent — they retry on the
+  next launch.
+
 ## [1.5.4] - 2026-09-10
 
 ### Fixed

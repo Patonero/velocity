@@ -1977,3 +1977,51 @@ body {
     background: linear-gradient(135deg, #2196f3, #1e88e5);
     border-left: 4px solid #1565c0;
 }
+
+/* Persistent notification with an action button (e.g. "Update ready - Restart") */
+.notification-action {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 380px;
+}
+
+.notification-action-text {
+    flex: 1;
+}
+
+.notification-action-btn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1565c0;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.notification-action-btn:hover {
+    background: #ffffff;
+}
+
+.notification-dismiss-btn {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.notification-dismiss-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}

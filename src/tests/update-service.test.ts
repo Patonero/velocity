@@ -63,11 +63,16 @@ describe("UpdateService", () => {
       expect(mockAutoUpdater.checkForUpdates).not.toHaveBeenCalled();
     });
 
-    it("resolves as available and auto-triggers a download", async () => {
+    it("resolves as available without triggering a download itself", async () => {
+      // Downloading is electron-updater's job now (autoDownload = true). The
+      // old code called downloadUpdate() from here whenever the resolved
+      // check promise had a truthy updateInfo - which it always does, update
+      // or not - so a no-update launch fired a bogus download that errored
+      // and flashed "Update failed" on the splash.
       mockAutoUpdater.checkForUpdates.mockImplementation(() => {
         const info = { version: "1.6.0" };
         setTimeout(() => mockAutoUpdater.emit("update-available", info), 0);
-        return Promise.resolve({ updateInfo: info });
+        return Promise.resolve({ updateInfo: info, isUpdateAvailable: true });
       });
 
       const service = new UpdateService();
@@ -75,13 +80,15 @@ describe("UpdateService", () => {
 
       expect(result.available).toBe(true);
       expect(result.info).toEqual({ version: "1.6.0" });
-      expect(mockAutoUpdater.downloadUpdate).toHaveBeenCalled();
+      expect(mockAutoUpdater.downloadUpdate).not.toHaveBeenCalled();
     });
 
     it("resolves as not available and does not trigger a download", async () => {
+      // electron-updater still resolves with a populated updateInfo here.
       mockAutoUpdater.checkForUpdates.mockImplementation(() => {
-        setTimeout(() => mockAutoUpdater.emit("update-not-available", {}), 0);
-        return Promise.resolve({});
+        const info = { version: "1.5.0" };
+        setTimeout(() => mockAutoUpdater.emit("update-not-available", info), 0);
+        return Promise.resolve({ updateInfo: info, isUpdateAvailable: false });
       });
 
       const service = new UpdateService();
@@ -147,6 +154,27 @@ describe("UpdateService", () => {
       const result = await resultPromise;
       expect(result.available).toBe(false);
       expect(result.error).toMatch(/timeout/i);
+    });
+
+    it("leaves pre-existing autoUpdater listeners attached after a check", async () => {
+      // main.ts keeps a permanent 'error' listener on the shared autoUpdater
+      // singleton. An older version of this code called
+      // removeAllListeners('error') during cleanup, which would have torn that
+      // down. Guard against a regression.
+      const permanentErrorListener = jest.fn();
+      mockAutoUpdater.on("error", permanentErrorListener);
+
+      mockAutoUpdater.checkForUpdates.mockImplementation(() => {
+        setTimeout(() => mockAutoUpdater.emit("update-not-available", {}), 0);
+        return Promise.resolve({});
+      });
+
+      const service = new UpdateService();
+      await service.checkForUpdatesOptimized();
+
+      expect(mockAutoUpdater.listenerCount("error")).toBeGreaterThanOrEqual(1);
+      mockAutoUpdater.emit("error", new Error("later, unrelated error"));
+      expect(permanentErrorListener).toHaveBeenCalledTimes(1);
     });
 
     it("does not start a second check while one is already in progress", async () => {

@@ -77,52 +77,45 @@ export class UpdateService {
         setTimeout(() => reject(new Error('Update check timeout')), this.CHECK_TIMEOUT);
       });
 
-      // Create update check promise
+      // Create update check promise.
+      //
+      // We resolve off the autoUpdater events rather than the checkForUpdates()
+      // promise so the caller gets a clean available/not-available answer.
+      // Downloading is NOT triggered here - electron-updater does it itself
+      // (autoDownload = true) when an update is actually available. The old code
+      // called downloadUpdate() whenever result.updateInfo was truthy, but
+      // electron-updater always populates updateInfo (with the latest release,
+      // update or not), so on every no-update launch it fired a bogus
+      // downloadUpdate() -> "Please check update first" error -> the splash
+      // flashed "Update failed".
       const updateCheckPromise = new Promise<{ available: boolean; info?: any }>((resolve, reject) => {
-        let resolved = false;
+        let settled = false;
 
-        const cleanup = () => {
-          if (!resolved) {
-            autoUpdater.removeAllListeners('update-available');
-            autoUpdater.removeAllListeners('update-not-available');
-            autoUpdater.removeAllListeners('error');
-          }
+        const onAvailable = (info: any) => finish(() => resolve({ available: true, info }));
+        const onNotAvailable = (info: any) => finish(() => resolve({ available: false, info }));
+        const onError = (error: any) => finish(() => reject(error));
+
+        // Remove only the listeners we added - never touch 'error' wholesale,
+        // main.ts keeps a permanent 'error' listener on the same emitter.
+        const detach = () => {
+          autoUpdater.removeListener('update-available', onAvailable);
+          autoUpdater.removeListener('update-not-available', onNotAvailable);
+          autoUpdater.removeListener('error', onError);
         };
 
-        autoUpdater.once('update-available', (info) => {
-          if (!resolved) {
-            resolved = true;
-            cleanup();
-            resolve({ available: true, info });
-          }
-        });
+        function finish(action: () => void) {
+          if (settled) return;
+          settled = true;
+          detach();
+          action();
+        }
 
-        autoUpdater.once('update-not-available', (info) => {
-          if (!resolved) {
-            resolved = true;
-            cleanup();
-            resolve({ available: false, info });
-          }
-        });
+        autoUpdater.on('update-available', onAvailable);
+        autoUpdater.on('update-not-available', onNotAvailable);
+        autoUpdater.on('error', onError);
 
-        autoUpdater.once('error', (error) => {
-          if (!resolved) {
-            resolved = true;
-            cleanup();
-            reject(error);
-          }
-        });
-
-        // Start the check
-        autoUpdater.checkForUpdates().then((result) => {
-          // If update is available, automatically start download
-          if (result && result.updateInfo) {
-            console.log('Auto-starting download for available update');
-            autoUpdater.downloadUpdate().catch((downloadError) => {
-              console.error('Auto-download failed:', downloadError);
-            });
-          }
-        }).catch(reject);
+        // Start the check; surface a rejected check promise as the failure.
+        autoUpdater.checkForUpdates().catch((err) => finish(() => reject(err)));
       });
 
       // Race between timeout and update check

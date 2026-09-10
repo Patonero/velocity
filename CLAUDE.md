@@ -21,6 +21,11 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 │   ├── icon-service.ts   # Secure icon extraction service
 │   ├── types.ts          # TypeScript interface definitions
 │   ├── security-utils.ts # Pure, unit-tested security validation (extracted from main.ts)
+│   ├── update-service.ts # Update check orchestration (cache + timeout + events)
+│   ├── update-cache.ts   # TTL cache for update-check results
+│   ├── app-state.ts      # Non-setting persistent state (last launched version); classifyLaunch()
+│   ├── splash.ts         # Splash controller - branding only, no update logic
+│   ├── splash-preload.ts # Splash API bridge (just getCurrentVersion)
 │   └── tests/            # Jest test suites - see Testing Framework below
 ├── renderer/
 │   ├── index.html        # Main UI with Content Security Policy
@@ -98,6 +103,35 @@ Velocity Launcher is a security-hardened Electron-based emulator management appl
 - **IPC Handlers** - All operations validated before execution
 - **Content Security Policy** - Prevents XSS and code injection
 
+### Startup & Update Flow (IMPORTANT)
+The splash window and the main window are created **together** at
+`app.whenReady` (`main.ts`). The splash is **pure branding** - it shows the
+logo and a spinner while the main window's renderer loads, does no IPC beyond
+reading the version, and is closed by the main window's `ready-to-show`. It
+**never** waits on, or reacts to, the update check. (It used to block launch on
+a network round-trip to GitHub - that's the regression to avoid.)
+
+Updates are **fully silent and background-only**:
+- `autoUpdater.autoDownload = true`, `autoInstallOnAppQuit = true`.
+- `main.ts` runs `updateService.backgroundUpdateCheck()` ~2s after the main
+  window shows (gated on the `autoUpdateCheck` setting). electron-updater
+  downloads any found update on its own.
+- `autoUpdater` `error` events are **logged and never forwarded to a renderer** -
+  a failed check/download is a non-event; we retry next launch. Only an install
+  the user explicitly triggered surfaces an error, at the call site.
+- On `update-downloaded` the renderer shows a persistent action toast
+  ("Update ready - restart to apply" -> `showActionNotification`). The
+  header update button / modal are a secondary status view; the modal no
+  longer has a manual "Download" step.
+- `app-state.ts` records the last launched version. On a version change,
+  `main.ts` sends `app-updated` and the renderer shows an "Updated to vX.Y.Z"
+  toast. `classifyLaunch()` is the pure, tested classifier.
+
+`update-service.ts` resolves its check off the `autoUpdater` events (not the
+`checkForUpdates()` promise) and removes only the listeners it added - never
+`removeAllListeners('error')`, because `main.ts` keeps a permanent `error`
+listener on the same singleton.
+
 ## Code Conventions
 
 ### TypeScript
@@ -144,7 +178,8 @@ Coverage today is focused on the security-critical validation logic - the actual
 - **`storage.test.ts`**: `StorageService` CRUD, `isValidEmulatorData`, `sanitizeString`, corrupt-config fallback
 - **`icon-service.test.ts`**: `IconService.extractIcon`/`cleanupUnusedIcons`, `isValidIconPath`, `isValidOutputPath`, PowerShell invocation via mocked `child_process.spawn` (verifies parameterized argv, not string interpolation)
 - **`update-cache.test.ts`**: `UpdateCache` TTL/expiry logic, corrupt-cache fallback, the stale-while-revalidate branch in `getInstantResult`
-- **`update-service.test.ts`**: `UpdateService.checkForUpdatesOptimized` (cache short-circuit, available/not-available/error/timeout paths, the concurrent-check guard) via a mocked `electron-updater` event emitter, plus `getEstimatedPatchSize`
+- **`update-service.test.ts`**: `UpdateService.checkForUpdatesOptimized` (cache short-circuit, available/not-available/error/timeout paths, the concurrent-check guard, and that a check never triggers its own download or tears down `main.ts`'s permanent `error` listener) via a mocked `electron-updater` event emitter, plus `getEstimatedPatchSize`
+- **`app-state.test.ts`**: `classifyLaunch` (first-run / updated / normal) and `AppState` read/write + corrupt-file fallback, including the end-to-end post-update-launch sequence
 - **`sort-utils.test.ts`**: `src/sort-utils.ts` - canonical/tested twin of `renderer.ts`'s `sortEmulators` comparator (all five sort keys, the never-launched-sorts-last case, non-mutation of the input array - see coverage gap below)
 
 Not yet covered: `main.ts`'s IPC wiring/process launching (would require mocking most of Electron), and `renderer.ts`'s actual DOM logic (card/list rendering, search filtering, view switching) - the sort *comparator* is covered via the canonical-twin pattern above, but not the DOM code that calls it.

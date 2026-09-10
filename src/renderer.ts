@@ -155,9 +155,9 @@ interface ElectronAPI {
   // Update event listeners
   onUpdateAvailable?: (callback: (info: any) => void) => void;
   onUpdateNotAvailable?: (callback: (info: any) => void) => void;
-  onUpdateError?: (callback: (error: string) => void) => void;
   onDownloadProgress?: (callback: (progress: any) => void) => void;
   onUpdateDownloaded?: (callback: (info: any) => void) => void;
+  onAppUpdated?: (callback: (version: string) => void) => void;
 }
 
 interface Window {
@@ -179,6 +179,7 @@ class VelocityLauncher {
   private currentEditingId: string | null = null;
   private systemPrefersDark: boolean = false;
   private updateInfo: any = null;
+  private updateDownloaded: boolean = false;
   private searchQuery: string = "";
   private typeOptions: Array<{ group: string; value: string; label: string }> =
     [];
@@ -1381,30 +1382,43 @@ class VelocityLauncher {
   private setupUpdateListeners(): void {
     const electronAPI = window.electronAPI;
 
-    // Set up update event listeners
+    // An update was found. Download happens silently in the background - don't
+    // interrupt the user. Just surface the quiet header cue; the modal (opened
+    // from that button) will show details if they want them.
     electronAPI.onUpdateAvailable?.((info: any) => {
-      console.log("Update available:", info);
+      console.log("Update available (downloading in background):", info);
       this.updateInfo = info;
+      this.updateDownloaded = false;
       this.showUpdateButton();
-      this.showUpdateModal();
     });
 
-    electronAPI.onUpdateNotAvailable?.((info: any) => {
+    electronAPI.onUpdateNotAvailable?.(() => {
       console.log("No update available");
-    });
-
-    electronAPI.onUpdateError?.((error: string) => {
-      console.error("Update error:", error);
-      this.showNotification(`Update error: ${error}`, "error");
     });
 
     electronAPI.onDownloadProgress?.((progress: any) => {
       this.updateDownloadProgress(progress);
     });
 
+    // Update is downloaded and ready. Now we prompt - a persistent toast with a
+    // Restart action, plus the modal flips to its install-ready state.
     electronAPI.onUpdateDownloaded?.((info: any) => {
       console.log("Update downloaded:", info);
+      this.updateInfo = info;
+      this.updateDownloaded = true;
+      this.showUpdateButton();
       this.showInstallButton();
+      const version = info?.version ? ` (v${info.version})` : "";
+      this.showActionNotification(
+        `Update ready${version} — restart to apply`,
+        "Restart",
+        () => this.installUpdate()
+      );
+    });
+
+    // We just came back up on a newer version than last launch.
+    electronAPI.onAppUpdated?.((version: string) => {
+      this.showNotification(`Updated to v${version}`, "success");
     });
 
     // Get current version and display it
@@ -1440,20 +1454,35 @@ class VelocityLauncher {
   private showUpdateModal(): void {
     if (!this.updateModal) return;
 
-    // Update modal content with version info
-    if (this.updateInfo) {
-      const newVersionElement = document.getElementById("new-version");
-      const updateMessageElement = document.getElementById("update-message");
-      const updateDetailsElement = document.getElementById("update-details");
+    const newVersionElement = document.getElementById("new-version");
+    const updateMessageElement = document.getElementById("update-message");
+    const updateDetailsElement = document.getElementById("update-details");
+    // Downloads are automatic now - the modal is a status view, not a
+    // "click to download" prompt.
+    const downloadBtn = document.getElementById("update-download-btn");
+    const installBtn = document.getElementById("update-install-btn");
 
-      if (newVersionElement) {
-        newVersionElement.textContent = this.updateInfo.version;
-      }
+    if (this.updateInfo && newVersionElement) {
+      newVersionElement.textContent = this.updateInfo.version;
+    }
+    if (updateDetailsElement) {
+      updateDetailsElement.classList.remove("hidden");
+    }
+    downloadBtn?.classList.add("hidden");
+
+    if (this.updateDownloaded) {
+      installBtn?.classList.remove("hidden");
       if (updateMessageElement) {
-        updateMessageElement.textContent = `Version ${this.updateInfo.version} is now available!`;
+        updateMessageElement.textContent = this.updateInfo?.version
+          ? `Version ${this.updateInfo.version} is ready to install.`
+          : "Update is ready to install.";
       }
-      if (updateDetailsElement) {
-        updateDetailsElement.classList.remove("hidden");
+    } else {
+      installBtn?.classList.add("hidden");
+      if (updateMessageElement) {
+        updateMessageElement.textContent = this.updateInfo?.version
+          ? `Downloading version ${this.updateInfo.version} in the background…`
+          : "Downloading update in the background…";
       }
     }
 
@@ -1686,19 +1715,32 @@ class VelocityLauncher {
     manualUpdateBtn.textContent = "Checking...";
 
     try {
-      // Trigger manual update check
-      await window.electronAPI.checkForUpdates();
+      const result = await window.electronAPI.checkForUpdates();
 
-      // Reset button after a delay
-      setTimeout(() => {
-        manualUpdateBtn.disabled = false;
-        manualUpdateBtn.textContent = originalText;
-      }, 2000);
+      if (result.available) {
+        // The background flow takes over from here (silent download, then the
+        // "Update ready - restart" toast on completion).
+        this.showNotification(
+          `Update available${result.info?.version ? ` (v${result.info.version})` : ""} — downloading…`,
+          "info"
+        );
+      } else if (result.error) {
+        this.showNotification(
+          "Couldn't check for updates. Try again later.",
+          "error"
+        );
+      } else {
+        this.showNotification("You're on the latest version.", "success");
+      }
     } catch (error) {
       console.error("Error checking for updates:", error);
+      this.showNotification(
+        "Couldn't check for updates. Try again later.",
+        "error"
+      );
+    } finally {
       manualUpdateBtn.disabled = false;
       manualUpdateBtn.textContent = originalText;
-      this.showNotification("Failed to check for updates. Please try again later.", "error");
     }
   }
 
@@ -1933,6 +1975,49 @@ class VelocityLauncher {
         }
       }, 300);
     }, 3000);
+  }
+
+  // A persistent notification with an action button - stays until the user acts
+  // on it or dismisses it. Used for "Update ready - restart to apply".
+  private showActionNotification(
+    message: string,
+    actionLabel: string,
+    onAction: () => void
+  ): void {
+    // Only ever one of these at a time.
+    document
+      .querySelectorAll(".notification-action")
+      .forEach((n) => n.remove());
+
+    const notification = document.createElement("div");
+    notification.className = "notification notification-info notification-action";
+
+    const text = document.createElement("span");
+    text.className = "notification-action-text";
+    text.textContent = message;
+
+    const actionBtn = document.createElement("button");
+    actionBtn.className = "notification-action-btn";
+    actionBtn.textContent = actionLabel;
+    actionBtn.addEventListener("click", () => {
+      onAction();
+    });
+
+    const dismissBtn = document.createElement("button");
+    dismissBtn.className = "notification-dismiss-btn";
+    dismissBtn.setAttribute("aria-label", "Dismiss");
+    dismissBtn.textContent = "×";
+    dismissBtn.addEventListener("click", () => {
+      notification.classList.remove("show");
+      setTimeout(() => notification.remove(), 300);
+    });
+
+    notification.appendChild(text);
+    notification.appendChild(actionBtn);
+    notification.appendChild(dismissBtn);
+    document.body.appendChild(notification);
+
+    setTimeout(() => notification.classList.add("show"), 100);
   }
 }
 
