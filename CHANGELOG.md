@@ -3,6 +3,22 @@
 All notable changes to Velocity Launcher are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.3] - 2026-09-10
+
+### Fixed
+- Taskbar icon of the running app is no longer clipped/distorted. The
+  window icon now uses a square, multi-resolution `.ico` on Windows
+  (was a non-square 355x338 PNG that Windows squashed into the square
+  taskbar slot); the source icon art is now a proper 512x512 square.
+- The window icon file is now actually bundled into the installed app
+  (`assets/` was only copied to `resources/`, so the packaged build
+  silently fell back to the executable icon).
+
+### Changed
+- App now sets an explicit AppUserModelID (`com.velocity.launcher`) so
+  Windows associates the running window with the pinned/Start-Menu
+  shortcut (shared taskbar button, consistent icon).
+
 ## [1.5.2] - 2026-09-09
 
 Maintenance release - no user-facing feature changes.

@@ -42,6 +42,13 @@ if (process.env.NODE_ENV === "development") {
   }
 }
 
+// Window/taskbar icon. On Windows use the multi-resolution .ico so the taskbar
+// can pick a crisp small size; other platforms use the square PNG.
+const iconPath = path.join(
+  __dirname,
+  process.platform === "win32" ? "../assets/icon.ico" : "../assets/icon.png"
+);
+
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let storageService: StorageService;
@@ -143,7 +150,7 @@ function createSplashWindow(): void {
     },
     title: "Velocity Launcher",
     show: false,
-    icon: path.join(__dirname, "../assets/icon.png"),
+    icon: iconPath,
     center: true,
   });
 
@@ -177,7 +184,7 @@ function createMainWindow(): void {
     },
     title: "Velocity Launcher",
     show: false,
-    icon: path.join(__dirname, "../assets/icon.png"),
+    icon: iconPath,
   });
 
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
@@ -460,6 +467,13 @@ function setupIpcHandlers(): void {
 }
 
 app.whenReady().then(() => {
+  // Match the installed app's identity so Windows merges the running window with
+  // the pinned/Start-Menu shortcut (shared taskbar button, correct icon,
+  // working notifications). Must match the NSIS shortcut's AppUserModelID.
+  if (process.platform === "win32") {
+    app.setAppUserModelId("com.velocity.launcher");
+  }
+
   storageService = new StorageService();
   iconService = new IconService();
   updateService = new UpdateService();
