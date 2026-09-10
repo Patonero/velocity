@@ -3,6 +3,13 @@
 All notable changes to Velocity Launcher are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.5.7] - 2026-09-10
+
+### Fixed
+- The settings cog from 1.5.6 had lopsided teeth (its path was
+  approximated by hand). Replaced with the exact Heroicons `cog-6-tooth`
+  geometry.
+
 ## [1.5.6] - 2026-09-10
 
 ### Fixed
